@@ -5,7 +5,10 @@ const bodyParser = require('body-parser');
 const connectDB  = require('./config/db');
 const Problem    = require('./models/Problem');
 const Submission = require('./models/Submission');
+const User       = require('./models/User');
 const { executeCode } = require('./services/dockerService');
+const authRoutes = require('./routes/authRoutes');
+const { protect } = require('./middleware/authMiddleware');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -16,6 +19,9 @@ connectDB();
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(bodyParser.json());
+
+// ── Auth Routes ────────────────────────────────────────────────────────────────
+app.use('/api/auth', authRoutes);
 
 // ── Problem Routes ─────────────────────────────────────────────────────────────
 
@@ -64,9 +70,9 @@ app.get('/api/problems/:id', async (req, res) => {
  *
  * Fetches problem metadata + test cases from MongoDB,
  * generates a LeetCode-style wrapper, runs it inside Docker,
- * and saves a Submission record.
+ * saves a Submission record, and updates User progress on success.
  */
-app.post('/api/execute', async (req, res) => {
+app.post('/api/execute', protect, async (req, res) => {
   const { language, code, problemId } = req.body;
 
   if (!language || !code) {
@@ -130,6 +136,14 @@ app.post('/api/execute', async (req, res) => {
       passedCases,
       totalCases:    result.results.length,
     }).catch(() => {});
+
+    // Update user's progress if accepted
+    if (allPassed) {
+      await User.findByIdAndUpdate(
+        req.user._id,
+        { $addToSet: { solvedProblems: problem._id } }
+      ).catch(() => {});
+    }
 
     return res.json({ results: result.results });
   } catch (err) {

@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams, Navigate, useNavigate } from 'react-router-dom'
 import { Editor } from '@monaco-editor/react'
 import { mockProblems } from '../utils/dummyData'
+import { useUserStore } from '../store/useUserStore'
+import api from '../utils/api'
 import {
   Play, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, AlertCircle,
@@ -233,6 +235,8 @@ function TestResultTab({ testResults }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export const Problem = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const user = useUserStore((state) => state.user)
 
   // State
   const [lang, setLang]               = useState('cpp')
@@ -260,6 +264,12 @@ export const Problem = () => {
   }
 
   const handleRunCode = async () => {
+    if (!user) {
+      alert("Please login or register to execute code and track your progress.");
+      navigate('/login');
+      return;
+    }
+
     if (lang === 'javascript') {
       setTestResults({ error: 'JavaScript execution is not yet supported.\nPlease switch to C++, Python 3, or Java.' })
       setBottomTab('result')
@@ -273,24 +283,20 @@ export const Problem = () => {
     const code = editorRef.current?.getValue() || (problem.starterCode[lang] ?? '')
 
     try {
-      const res  = await fetch('http://localhost:5000/api/execute', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          language:  lang,
-          code,
-          problemId: problem.id,
-        }),
+      const { data } = await api.post('/execute', {
+        language:  lang,
+        code,
+        problemId: problem.id,
       })
-      const data = await res.json()
 
-      if (!res.ok || data.error) {
-        setTestResults({ error: data.error || 'Execution failed.' })
+      if (data.error) {
+        setTestResults({ error: data.error })
       } else {
         setTestResults({ results: data.results })
       }
-    } catch {
-      setTestResults({ error: 'Server Error: Could not connect to compiler.\nMake sure the backend is running on port 5000.' })
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Server Error: Could not connect to compiler.\nMake sure the backend is running on port 5000.';
+      setTestResults({ error: errorMsg });
     } finally {
       setIsRunning(false)
     }
