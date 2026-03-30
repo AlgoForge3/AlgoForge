@@ -4,7 +4,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const templates = require('../utils/languageTemplates');
 
-const TIMEOUT_MS = 5000; // 5 second timeout for code execution
+const TIMEOUT_MS = 60000; // 60 second timeout (Docker may need to pull image on first run)
 
 async function executeCode(language, userCode) {
     const uuid = uuidv4();
@@ -32,15 +32,15 @@ async function executeCode(language, userCode) {
     switch (language) {
         case 'cpp':
             fileName = 'script.cpp';
-            runCommand = `docker run --rm -v ${dockerMountPath} -w /usr/src/app gcc:latest sh -c "g++ -O2 script.cpp -o script.out && ./script.out"`;
+            runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app gcc:latest sh -c "g++ -O2 script.cpp -o script.out && ./script.out"`;
             break;
         case 'java':
             fileName = 'Main.java';
-            runCommand = `docker run --rm -v ${dockerMountPath} -w /usr/src/app openjdk:latest sh -c "javac Main.java && java Main"`;
+            runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app openjdk:17-slim sh -c "javac Main.java && java Main"`;
             break;
         case 'python':
             fileName = 'script.py';
-            runCommand = `docker run --rm -v ${dockerMountPath} -w /usr/src/app python:3.9-slim sh -c "python script.py"`;
+            runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app python:3.9-slim sh -c "python script.py"`;
             break;
     }
     
