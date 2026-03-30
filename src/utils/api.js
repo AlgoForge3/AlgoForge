@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useUserStore } from '../store/useUserStore';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Note: change this for production
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api', // Use env var for production
 });
 
 // Add a request interceptor to inject the token
