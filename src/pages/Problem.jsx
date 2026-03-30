@@ -205,7 +205,9 @@ function TestResultTab({ testResults }) {
       {cur && (
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 custom-scrollbar">
           {[
-            { label: 'Input',    value: `[${cur.input.join(', ')}]` },
+            { label: 'Input',    value: typeof cur.input === 'object' && !Array.isArray(cur.input)
+                ? Object.entries(cur.input).map(([k,v]) => `${k} = ${JSON.stringify(v)}`).join('\n')
+                : JSON.stringify(cur.input) },
             { label: 'Expected', value: cur.expected },
             { label: 'Output',   value: cur.output ?? 'No output', isOut: true, passed: cur.passed },
           ].map(({ label, value, isOut, passed }) => (
@@ -277,7 +279,7 @@ export const Problem = () => {
         body:    JSON.stringify({
           language:  lang,
           code,
-          testCases: problem.testCases,
+          problemId: problem.id,
         }),
       })
       const data = await res.json()
