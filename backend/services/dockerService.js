@@ -2,41 +2,68 @@ const { exec } = require('child_process');
 const fs = require('fs/promises');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const templates = require('../utils/languageTemplates');
+const { generateWrapper } = require('../utils/languageTemplates');
 
 const TIMEOUT_MS = 60000;
 
 /**
- * Parse the Docker stdout to extract per-testcase results.
- * Lines are expected in the format: "TC0:val1,val2"
+ * Parse per-testcase results from Docker stdout.
+ * Expected line format:  TC0:val1,val2,...
+ *
+ * Comparison is type-aware using problemMeta.returnType.
  */
-function parseResults(stdout, testCases) {
+function parseResults(stdout, testCases, returnType) {
   const lines = stdout.split('\n').map(l => l.trim()).filter(Boolean);
+  const isVector = /vector|List|int\[\]|long\[\]/.test(returnType || '');
+  const isBool   = /bool|boolean/.test(returnType || '');
+
   return testCases.map((tc, idx) => {
     const marker = `TC${idx}:`;
     const line   = lines.find(l => l.startsWith(marker));
+
+    // Normalize expected to a comparable string
+    let expectedStr;
+    if (Array.isArray(tc.expected)) {
+      expectedStr = tc.expected.join(',');
+    } else if (typeof tc.expected === 'boolean') {
+      expectedStr = tc.expected ? 'true' : 'false';
+    } else {
+      expectedStr = String(tc.expected);
+    }
+
     if (!line) {
       return {
-        input:    tc.input,
-        expected: `[${tc.expected.join(',')}]`,
+        input:    tc.inputs,
+        expected: isVector ? `[${expectedStr}]` : expectedStr,
         output:   null,
         passed:   false,
         status:   'no_output',
       };
     }
-    const raw      = line.substring(marker.length).trim();
-    const expected = tc.expected.join(',');
+
+    const raw = line.substring(marker.length).trim();
+
+    // Build display strings
+    const displayOut = isVector ? `[${raw}]` : raw;
+    const displayExp = isVector ? `[${expectedStr}]` : expectedStr;
+
     return {
-      input:    tc.input,
-      expected: `[${expected}]`,
-      output:   `[${raw}]`,
-      passed:   raw === expected,
-      status:   raw === expected ? 'passed' : 'wrong_answer',
+      input:    tc.inputs,
+      expected: displayExp,
+      output:   displayOut,
+      passed:   raw === expectedStr,
+      status:   raw === expectedStr ? 'passed' : 'wrong_answer',
     };
   });
 }
 
-async function executeCode(language, userCode, testCases) {
+/**
+ * @param {string} language
+ * @param {string} userCode
+ * @param {object} problemMeta  — { functionName, returnType, parameters }
+ * @param {Array}  testCases    — [{ inputs, expected, display }]
+ */
+async function executeCode(language, userCode, problemMeta, testCases) {
   const uuid   = uuidv4();
   const tmpDir = path.resolve(__dirname, '..', 'tmp', uuid);
 
@@ -46,16 +73,18 @@ async function executeCode(language, userCode, testCases) {
     return { error: 'Failed to create temp directory' };
   }
 
-  const languageObj = templates[language];
-  if (!languageObj) {
+  // Generate the complete source file
+  let wrapperCode;
+  try {
+    wrapperCode = generateWrapper(language, userCode, problemMeta, testCases);
+  } catch (e) {
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-    return { error: `Unsupported language: ${language}` };
+    return { error: e.message };
   }
 
-  const wrapperCode     = languageObj.wrapper(userCode, testCases);
   const dockerMountPath = `"${tmpDir}:/usr/src/app"`;
-
   let fileName, runCommand;
+
   switch (language) {
     case 'cpp':
       fileName   = 'script.cpp';
@@ -71,7 +100,7 @@ async function executeCode(language, userCode, testCases) {
       break;
     default:
       await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-      return { error: 'Unsupported language' };
+      return { error: `Unsupported language: ${language}` };
   }
 
   try {
@@ -79,7 +108,6 @@ async function executeCode(language, userCode, testCases) {
 
     return await new Promise((resolve) => {
       exec(runCommand, { timeout: TIMEOUT_MS }, async (error, stdout, stderr) => {
-        // Cleanup
         fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
 
         if (error) {
@@ -88,12 +116,11 @@ async function executeCode(language, userCode, testCases) {
           }
           return resolve({ error: (stderr || stdout || error.message).trim() });
         }
-
         if (stderr) {
           return resolve({ error: stderr.trim() });
         }
 
-        const results = parseResults(stdout, testCases);
+        const results = parseResults(stdout, testCases, problemMeta.returnType);
         return resolve({ results });
       });
     });
