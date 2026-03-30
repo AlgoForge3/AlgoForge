@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { Editor } from '@monaco-editor/react'
 import { mockProblems } from '../utils/dummyData'
@@ -9,6 +9,7 @@ export const Problem = () => {
   const [language, setLanguage] = useState('cpp')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [output, setOutput] = useState('')
+  const editorRef = useRef(null)
 
   // Find the problem based on ID from URL
   const problem = mockProblems.find((p) => p.id === parseInt(id))
@@ -18,16 +19,35 @@ export const Problem = () => {
     return <Navigate to="/dashboard" replace />
   }
 
-  // Handle simulating code execution
-  const handleRunCode = () => {
+  const handleEditorDidMount = (editor, monaco) => {
+    editorRef.current = editor
+  }
+
+  // Handle running code against the local docker backend API
+  const handleRunCode = async () => {
     setIsSubmitting(true)
-    setOutput('Compiling code...\nRunning test cases...\n|====>...............| 25%\n|=========>..........| 50%\n|===============>....| 75%')
+    setOutput('Compiling code...\nRunning against local compiler agent...')
     
-    // Simulate compilation and execution delay
-    setTimeout(() => {
+    const editorValue = editorRef.current ? editorRef.current.getValue() : (language === 'cpp' ? problem.starterCode : '# Write your code here')
+
+    try {
+      const response = await fetch('http://localhost:5000/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: language, code: editorValue, problemId: problem.id })
+      })
+      const data = await response.json()
+      
+      if (!response.ok) {
+        setOutput(`Error: ${data.error || 'Execution failed'}`)
+      } else {
+        setOutput(data.output || 'Successfully executed with no console output.')
+      }
+    } catch (err) {
+      setOutput('Server Error: Could not connect to compiler')
+    } finally {
       setIsSubmitting(false)
-      setOutput('✅ Test Cases Passed: 3/3.\n⏱️ Time: 4ms.\n💾 Memory: 1.2 MB.\n\nGreat job! Your solution is optimally accepted.')
-    }, 2000)
+    }
   }
 
   return (
@@ -91,6 +111,7 @@ export const Problem = () => {
             theme="vs-dark"
             language={language}
             value={language === 'cpp' ? problem.starterCode : '# Write your code here'}
+            onMount={handleEditorDidMount}
             loading={<div className="flex items-center justify-center h-full text-slate-500">Loading IDE...</div>}
             options={{
               minimap: { enabled: false },
@@ -119,7 +140,7 @@ export const Problem = () => {
           </div>
           <div className="flex-1 p-5 font-mono text-sm overflow-y-auto custom-scrollbar">
             {output ? (
-              <pre className={`whitespace-pre-wrap leading-relaxed ${output.includes('✅') ? 'text-emerald-400' : 'text-indigo-200'}`}>
+              <pre className={`whitespace-pre-wrap leading-relaxed ${output.includes('Error') ? 'text-rose-400 font-semibold' : 'text-emerald-300'}`}>
                 {output}
               </pre>
             ) : (
