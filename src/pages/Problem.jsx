@@ -28,7 +28,7 @@ export const Problem = () => {
     setIsSubmitting(true)
     setOutput('Compiling code...\nRunning against local compiler agent...')
     
-    const editorValue = editorRef.current ? editorRef.current.getValue() : (language === 'cpp' ? problem.starterCode : '# Write your code here')
+    const editorValue = editorRef.current ? editorRef.current.getValue() : (problem.starterCode[language] || '# Write your code here')
 
     try {
       const response = await fetch('http://localhost:5000/api/execute', {
@@ -110,7 +110,7 @@ export const Problem = () => {
             height="100%"
             theme="vs-dark"
             language={language}
-            value={language === 'cpp' ? problem.starterCode : '# Write your code here'}
+            value={problem.starterCode[language] || '# Write your code here'}
             onMount={handleEditorDidMount}
             loading={<div className="flex items-center justify-center h-full text-slate-500">Loading IDE...</div>}
             options={{
