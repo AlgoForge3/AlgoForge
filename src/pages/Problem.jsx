@@ -2,72 +2,74 @@ import { useState, useRef } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { Editor } from '@monaco-editor/react'
 import { mockProblems } from '../utils/dummyData'
-import { Play, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, Clock, Database, Tag } from 'lucide-react'
+import {
+  Play, ChevronLeft, ChevronRight,
+  CheckCircle, XCircle, AlertCircle,
+  Clock, Tag, FileCode, RotateCcw,
+} from 'lucide-react'
 
-const DIFFICULTY_STYLES = {
-  Easy:   { badge: 'text-emerald-400 bg-emerald-400/10', dot: 'bg-emerald-400' },
-  Medium: { badge: 'text-amber-400   bg-amber-400/10',   dot: 'bg-amber-400'   },
-  Hard:   { badge: 'text-rose-400    bg-rose-400/10',     dot: 'bg-rose-400'     },
+// ─── Constants ────────────────────────────────────────────────────────────────
+const DIFFICULTY = {
+  Easy:   { text: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+  Medium: { text: 'text-amber-400',   bg: 'bg-amber-400/10'   },
+  Hard:   { text: 'text-rose-400',    bg: 'bg-rose-400/10'    },
 }
 
-const LANG_OPTIONS = [
-  { value: 'cpp',        label: 'C++',        monacoLang: 'cpp'        },
-  { value: 'python',     label: 'Python 3',   monacoLang: 'python'     },
-  { value: 'java',       label: 'Java',       monacoLang: 'java'       },
-  { value: 'javascript', label: 'JavaScript', monacoLang: 'javascript' },
+const LANGS = [
+  { value: 'cpp',        label: 'C++',        monaco: 'cpp',        file: 'solution.cpp'  },
+  { value: 'python',     label: 'Python 3',   monaco: 'python',     file: 'solution.py'   },
+  { value: 'java',       label: 'Java',       monaco: 'java',       file: 'Solution.java' },
+  { value: 'javascript', label: 'JavaScript', monaco: 'javascript', file: 'solution.js'   },
 ]
 
-// ── Left panel tabs ──────────────────────────────────────────────────────────
-const DescriptionTab = ({ problem }) => {
-  const diff = DIFFICULTY_STYLES[problem.difficulty] || DIFFICULTY_STYLES.Easy
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
+/** Left panel: problem description */
+function DescriptionPanel({ problem }) {
+  const d = DIFFICULTY[problem.difficulty] || DIFFICULTY.Easy
   return (
-    <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
-      {/* Title row */}
+    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 custom-scrollbar text-sm">
+      {/* Title + badge */}
       <div>
-        <div className="flex items-center gap-3 mb-3">
-          <h1 className="text-xl font-bold text-white leading-tight">{problem.title}</h1>
-          <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${diff.badge}`}>
+        <h1 className="text-base font-semibold text-white mb-2">{problem.title}</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${d.text} ${d.bg}`}>
             {problem.difficulty}
           </span>
-        </div>
-
-        {/* Meta tags */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {problem.tags?.map(tag => (
-            <span key={tag} className="flex items-center gap-1 text-xs text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md">
-              <Tag className="w-3 h-3" />{tag}
+          {problem.tags?.map(t => (
+            <span key={t} className="flex items-center gap-1 text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
+              <Tag className="w-2.5 h-2.5" />{t}
             </span>
           ))}
-          <span className="text-xs text-slate-500 ml-auto">Acceptance: {problem.acceptance}</span>
-        </div>
-
-        {/* Description */}
-        <div className="text-sm text-slate-300 leading-relaxed space-y-2">
-          {problem.description.split('\n\n').map((para, i) => (
-            <p key={i} dangerouslySetInnerHTML={{
-              __html: para
-                .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-slate-700 rounded text-amber-300 font-mono text-xs">$1</code>')
-                .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white">$1</strong>')
-                .replace(/\*([^*]+)\*/g, '<em class="text-slate-200">$1</em>')
-                .replace(/\n/g, '<br/>')
-            }} />
-          ))}
+          <span className="ml-auto text-xs text-slate-600">✓ {problem.acceptance}</span>
         </div>
       </div>
 
+      {/* Description */}
+      <div className="text-slate-300 leading-relaxed space-y-3">
+        {problem.description.split('\n\n').map((p, i) => (
+          <p key={i} dangerouslySetInnerHTML={{
+            __html: p
+              .replace(/`([^`]+)`/g, '<code class="px-1 py-px bg-slate-700/70 rounded text-amber-300 font-mono text-xs">$1</code>')
+              .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+              .replace(/\*([^*]+)\*/g, '<em class="text-slate-200">$1</em>')
+              .replace(/\n/g, '<br/>')
+          }} />
+        ))}
+      </div>
+
       {/* Examples */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {problem.examples?.map((ex, i) => (
-          <div key={i} className="rounded-lg bg-slate-800/50 border border-slate-700/50 overflow-hidden">
-            <div className="px-4 py-2 bg-slate-800 border-b border-slate-700/50">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Example {i + 1}</span>
+          <div key={i} className="rounded-lg border border-slate-700/40 overflow-hidden bg-slate-800/30">
+            <div className="px-3 py-1.5 bg-slate-800/60">
+              <span className="text-xs font-semibold text-slate-400">Example {i + 1}</span>
             </div>
-            <div className="p-4 font-mono text-sm space-y-2">
-              <div><span className="text-slate-500">Input:&nbsp;&nbsp;</span><span className="text-slate-200">{ex.input}</span></div>
-              <div><span className="text-slate-500">Output:&nbsp;</span><span className="text-slate-200">{ex.output}</span></div>
+            <div className="px-3 py-3 font-mono text-xs space-y-1.5">
+              <div><span className="text-slate-500">Input:&nbsp; </span><span className="text-slate-200">{ex.input}</span></div>
+              <div><span className="text-slate-500">Output: </span><span className="text-slate-200">{ex.output}</span></div>
               {ex.explanation && (
-                <div className="pt-1 text-xs text-slate-400 font-sans">
+                <div className="mt-2 text-xs font-sans text-slate-400 leading-relaxed">
                   <span className="text-slate-500">Explanation: </span>{ex.explanation}
                 </div>
               )}
@@ -79,12 +81,12 @@ const DescriptionTab = ({ problem }) => {
       {/* Constraints */}
       {problem.constraints?.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-white mb-3">Constraints:</h3>
-          <ul className="space-y-1.5">
+          <p className="text-xs font-semibold text-slate-300 mb-2">Constraints:</p>
+          <ul className="space-y-1">
             {problem.constraints.map((c, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-slate-400 font-mono">
-                <span className="text-slate-600 mt-0.5">•</span>
-                <code className="text-slate-300 text-xs bg-slate-800 px-1.5 py-0.5 rounded">{c}</code>
+              <li key={i} className="flex gap-2 text-xs text-slate-400 font-mono">
+                <span className="text-slate-600 shrink-0">•</span>
+                <code className="text-slate-300">{c}</code>
               </li>
             ))}
           </ul>
@@ -94,239 +96,361 @@ const DescriptionTab = ({ problem }) => {
   )
 }
 
-// ── Output status ────────────────────────────────────────────────────────────
-const OutputPanel = ({ output, isSubmitting, status }) => {
-  const isErr = status === 'error'
-  const isOk  = status === 'success'
-
+/** Bottom panel: Test Cases tab */
+function TestCaseTab({ problem, selCase, setSelCase }) {
+  const tc = problem.testCases?.[selCase]
   return (
-    <div className="h-52 bg-[#0d1117] border-t border-slate-700/60 flex flex-col flex-shrink-0">
-      {/* Panel header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700/40 bg-slate-900/60">
-        <div className="flex items-center gap-2">
-          {isOk  && <CheckCircle  className="w-3.5 h-3.5 text-emerald-400" />}
-          {isErr && <AlertCircle  className="w-3.5 h-3.5 text-rose-400"    />}
-          {!isOk && !isErr && <span className="w-3.5 h-3.5 rounded-full bg-slate-600 inline-block" />}
-          <span className={`text-xs font-bold uppercase tracking-widest ${
-            isOk ? 'text-emerald-400' : isErr ? 'text-rose-400' : 'text-slate-500'
-          }`}>
-            {isOk ? 'Accepted' : isErr ? 'Runtime Error' : 'Console Output'}
-          </span>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Case selector pills */}
+      <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
+        {problem.testCases?.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setSelCase(i)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+              selCase === i
+                ? 'bg-slate-600 text-white'
+                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+            }`}
+          >
+            Case {i + 1}
+          </button>
+        ))}
+      </div>
+      {/* Input display */}
+      {tc && (
+        <div className="px-4 pb-3 flex-1 overflow-y-auto">
+          <p className="text-xs text-slate-500 mb-1 font-semibold uppercase tracking-wider">Input</p>
+          <pre className="font-mono text-xs text-slate-300 bg-slate-800/50 rounded-lg px-3 py-2.5 whitespace-pre-wrap">
+            {tc.display}
+          </pre>
         </div>
-        {isSubmitting && (
-          <span className="text-xs text-amber-400 animate-pulse font-medium flex items-center gap-1">
-            <Clock className="w-3 h-3" /> Executing…
-          </span>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
-        {output ? (
-          <>
-            {/* Status overview bar */}
-            {(isOk || isErr) && (
-              <div className={`mb-3 flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold ${
-                isOk
-                  ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-                  : 'bg-rose-500/10    text-rose-300    border border-rose-500/20'
-              }`}>
-                {isOk ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-                {isOk ? 'Your output matched expected output.' : 'Compilation / Runtime failed.'}
-              </div>
-            )}
-            <pre className={`whitespace-pre-wrap font-mono text-sm leading-relaxed ${
-              isErr ? 'text-rose-300' : 'text-emerald-200'
-            }`}>
-              {output}
-            </pre>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-600 gap-2">
-            <Database className="w-5 h-5" />
-            <p className="text-xs font-sans italic">Run your code to see output here.</p>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   )
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+/** Bottom panel: Test Result tab */
+function TestResultTab({ testResults }) {
+  const [selResult, setSelResult] = useState(0)
+
+  if (!testResults) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-slate-600 gap-2">
+        <Clock className="w-5 h-5" />
+        <p className="text-xs italic">Run your code to see test results.</p>
+      </div>
+    )
+  }
+
+  if (testResults.error) {
+    return (
+      <div className="flex-1 overflow-y-auto px-4 py-3 custom-scrollbar">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          <span className="text-xs font-bold text-rose-400 uppercase tracking-wider">Compilation / Runtime Error</span>
+        </div>
+        <pre className="font-mono text-xs text-rose-300 bg-rose-500/5 border border-rose-500/20 rounded-lg px-3 py-2.5 whitespace-pre-wrap leading-relaxed">
+          {testResults.error}
+        </pre>
+      </div>
+    )
+  }
+
+  const { results } = testResults
+  const allPassed   = results.every(r => r.passed)
+  const passCount   = results.filter(r => r.passed).length
+
+  const cur = results[selResult]
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Overall status bar */}
+      <div className={`mx-4 mt-2 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold shrink-0 ${
+        allPassed
+          ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+          : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
+      }`}>
+        {allPassed
+          ? <CheckCircle className="w-3.5 h-3.5" />
+          : <XCircle className="w-3.5 h-3.5" />}
+        {allPassed
+          ? `All ${results.length} test cases passed 🎉`
+          : `${passCount} / ${results.length} test cases passed`}
+      </div>
+
+      {/* Case pills */}
+      <div className="flex items-center gap-2 px-4 py-1 shrink-0">
+        {results.map((r, i) => (
+          <button
+            key={i}
+            onClick={() => setSelResult(i)}
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+              selResult === i
+                ? r.passed
+                  ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/40'
+                  : 'bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40'
+                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            }`}
+          >
+            {r.passed
+              ? <CheckCircle className="w-3 h-3 text-emerald-400" />
+              : <XCircle    className="w-3 h-3 text-rose-400"    />}
+            Case {i + 1}
+          </button>
+        ))}
+      </div>
+
+      {/* Selected result detail */}
+      {cur && (
+        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 custom-scrollbar">
+          {[
+            { label: 'Input',    value: `[${cur.input.join(', ')}]` },
+            { label: 'Expected', value: cur.expected },
+            { label: 'Output',   value: cur.output ?? 'No output', isOut: true, passed: cur.passed },
+          ].map(({ label, value, isOut, passed }) => (
+            <div key={label}>
+              <p className="text-xs text-slate-500 font-semibold mb-1">{label}</p>
+              <pre className={`font-mono text-xs px-3 py-2 rounded-lg whitespace-pre-wrap ${
+                isOut
+                  ? passed
+                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
+                  : 'bg-slate-800/60 text-slate-300'
+              }`}>
+                {value}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export const Problem = () => {
   const { id } = useParams()
-  const [language, setLanguage]       = useState('cpp')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [output, setOutput]           = useState('')
-  const [status, setStatus]           = useState('idle')   // idle | success | error
-  const [activeTab, setActiveTab]     = useState('description')
+
+  // State
+  const [lang, setLang]               = useState('cpp')
+  const [isRunning, setIsRunning]     = useState(false)
+  const [testResults, setTestResults] = useState(null)
+  const [bottomTab, setBottomTab]     = useState('testcase')
+  const [selCase, setSelCase]         = useState(0)
   const editorRef = useRef(null)
 
-  const problem = mockProblems.find((p) => p.id === parseInt(id))
+  const problem = mockProblems.find(p => p.id === parseInt(id))
   if (!problem) return <Navigate to="/dashboard" replace />
 
-  const currentLang = LANG_OPTIONS.find(l => l.value === language) || LANG_OPTIONS[0]
+  const currentLang = LANGS.find(l => l.value === lang) || LANGS[0]
+  const d = DIFFICULTY[problem.difficulty] || DIFFICULTY.Easy
+  const problemIdx  = mockProblems.findIndex(p => p.id === parseInt(id))
 
-  const handleEditorDidMount = (editor) => {
-    editorRef.current = editor
+  const handleEditorMount = (editor) => { editorRef.current = editor }
+
+  const resetEditor = () => {
+    if (editorRef.current) {
+      editorRef.current.setValue(problem.starterCode[lang] || '')
+    }
+    setTestResults(null)
+    setBottomTab('testcase')
   }
 
   const handleRunCode = async () => {
-    if (language === 'javascript') {
-      setStatus('error')
-      setOutput('JavaScript execution is not yet supported.\nPlease switch to C++, Python 3, or Java.')
+    if (lang === 'javascript') {
+      setTestResults({ error: 'JavaScript execution is not yet supported.\nPlease switch to C++, Python 3, or Java.' })
+      setBottomTab('result')
       return
     }
 
-    setIsSubmitting(true)
-    setStatus('idle')
-    setOutput('⏳ Compiling… please wait (Docker may pull image on first run)')
+    setIsRunning(true)
+    setTestResults(null)
+    setBottomTab('result')
 
-    const code = editorRef.current
-      ? editorRef.current.getValue()
-      : (problem.starterCode[language] || '')
+    const code = editorRef.current?.getValue() || (problem.starterCode[lang] ?? '')
 
     try {
       const res  = await fetch('http://localhost:5000/api/execute', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language, code, problemId: problem.id }),
+        body:    JSON.stringify({
+          language:  lang,
+          code,
+          testCases: problem.testCases,
+        }),
       })
       const data = await res.json()
 
       if (!res.ok || data.error) {
-        setStatus('error')
-        setOutput(data.error || 'Execution failed.')
+        setTestResults({ error: data.error || 'Execution failed.' })
       } else {
-        setStatus('success')
-        setOutput(data.output || 'Program executed with no output.')
+        setTestResults({ results: data.results })
       }
     } catch {
-      setStatus('error')
-      setOutput('Server Error: Could not connect to compiler.\nMake sure the backend is running on port 5000.')
+      setTestResults({ error: 'Server Error: Could not connect to compiler.\nMake sure the backend is running on port 5000.' })
     } finally {
-      setIsSubmitting(false)
+      setIsRunning(false)
     }
   }
 
-  const problemIdx = mockProblems.findIndex(p => p.id === parseInt(id))
-  const prevProblem = mockProblems[problemIdx - 1]
-  const nextProblem = mockProblems[problemIdx + 1]
-
-  const diff = DIFFICULTY_STYLES[problem.difficulty] || DIFFICULTY_STYLES.Easy
-
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-[#0d1117] text-white">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-[#1a1a1a] text-white select-none">
 
-      {/* ── LEFT PANEL ──────────────────────────────────────── */}
-      <div className="w-[42%] min-w-[340px] flex flex-col border-r border-slate-700/50">
+      {/* ── LEFT: Description panel ─────────────────────────────── */}
+      <div className="w-[42%] min-w-[320px] max-w-[560px] flex flex-col border-r border-[#2d2d2d]">
 
         {/* Tab bar */}
-        <div className="flex items-center border-b border-slate-700/50 bg-[#161b22] px-2 flex-shrink-0">
-          {['description'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-3 text-xs font-semibold capitalize transition-colors border-b-2 -mb-px ${
-                activeTab === tab
-                  ? 'border-amber-400 text-amber-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-          {/* Nav arrows */}
-          <div className="ml-auto flex items-center gap-1 pr-2">
-            {prevProblem && (
-              <a href={`/problem/${prevProblem.id}`} className="p-1 rounded hover:bg-slate-700 text-slate-500 hover:text-white transition-colors" title="Previous">
+        <div className="flex items-center bg-[#222] border-b border-[#2d2d2d] flex-shrink-0 px-1">
+          <button className="px-4 py-2.5 text-xs font-medium border-b-2 border-amber-400 text-amber-400">
+            Description
+          </button>
+          {/* Prev / Next arrows */}
+          <div className="ml-auto flex items-center gap-0.5 pr-2">
+            {mockProblems[problemIdx - 1] && (
+              <a href={`/problem/${mockProblems[problemIdx - 1].id}`}
+                 className="p-1.5 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+                 title="Previous problem">
                 <ChevronLeft className="w-4 h-4" />
               </a>
             )}
-            {nextProblem && (
-              <a href={`/problem/${nextProblem.id}`} className="p-1 rounded hover:bg-slate-700 text-slate-500 hover:text-white transition-colors" title="Next">
+            {mockProblems[problemIdx + 1] && (
+              <a href={`/problem/${mockProblems[problemIdx + 1].id}`}
+                 className="p-1.5 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+                 title="Next problem">
                 <ChevronRight className="w-4 h-4" />
               </a>
             )}
           </div>
         </div>
 
-        {/* Tab content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {activeTab === 'description' && <DescriptionTab problem={problem} />}
-        </div>
+        <DescriptionPanel problem={problem} />
       </div>
 
-      {/* ── RIGHT PANEL: EDITOR + OUTPUT ────────────────────── */}
+      {/* ── RIGHT: Editor + Test panel ──────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Editor toolbar */}
-        <div className="h-12 flex items-center justify-between px-4 border-b border-slate-700/50 bg-[#161b22] flex-shrink-0">
-          {/* Language picker */}
+        {/* ── EDITOR TOP BAR ── */}
+        <div className="h-11 flex items-center justify-between px-3 bg-[#1e1e1e] border-b border-[#2d2d2d] flex-shrink-0">
+          {/* Left: language selector */}
           <div className="flex items-center gap-2">
             <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-slate-200 text-xs font-medium rounded-lg focus:ring-1 focus:ring-amber-500 focus:border-amber-500 px-3 py-1.5 outline-none cursor-pointer hover:bg-slate-700 transition-colors"
+              value={lang}
+              onChange={e => { setLang(e.target.value); setTestResults(null) }}
+              className="bg-[#2d2d2d] border border-[#3d3d3d] text-slate-200 text-xs font-medium rounded-md focus:ring-1 focus:ring-amber-500 focus:border-amber-500 px-2.5 py-1.5 outline-none cursor-pointer hover:bg-[#333] transition-colors"
             >
-              {LANG_OPTIONS.map(l => (
-                <option key={l.value} value={l.value}>{l.label}</option>
-              ))}
+              {LANGS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
             </select>
-            {/* Difficulty dot */}
-            <span className={`w-2 h-2 rounded-full ${diff.dot}`} />
-            <span className="text-xs text-slate-500">{problem.difficulty}</span>
+            {/* Reset button */}
+            <button
+              onClick={resetEditor}
+              title="Reset to starter code"
+              className="p-1.5 rounded-md text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* Run button */}
+          {/* Right: Run button */}
           <button
             id="run-code-btn"
             onClick={handleRunCode}
-            disabled={isSubmitting}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-1.5 rounded-lg transition-all active:scale-95 shadow-lg shadow-emerald-500/10"
+            disabled={isRunning}
+            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-xs font-semibold px-4 py-1.5 rounded-md transition-all shadow-md shadow-emerald-500/10 active:scale-95"
           >
-            <Play className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-pulse' : ''}`} fill="currentColor" />
-            {isSubmitting ? 'Running…' : 'Run Code'}
+            {isRunning
+              ? <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />Running…</>
+              : <><Play className="w-3.5 h-3.5" fill="currentColor" />Run Code</>
+            }
           </button>
         </div>
 
-        {/* Monaco Editor */}
-        <div className="flex-1 overflow-hidden">
+        {/* ── FILE TAB (LeetCode style) ── */}
+        <div className="flex items-center bg-[#1e1e1e] border-b border-[#2d2d2d] flex-shrink-0">
+          <div className="flex items-center gap-1.5 px-4 py-1.5 border-r border-[#2d2d2d] bg-[#1e1e1e]">
+            <FileCode className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-xs text-slate-300 font-mono">{currentLang.file}</span>
+          </div>
+        </div>
+
+        {/* ── MONACO EDITOR ── */}
+        <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
           <Editor
             height="100%"
             theme="vs-dark"
-            language={currentLang.monacoLang}
-            value={problem.starterCode[language] || ''}
-            onMount={handleEditorDidMount}
+            language={currentLang.monaco}
+            value={problem.starterCode[lang] || ''}
+            onMount={handleEditorMount}
             loading={
-              <div className="flex items-center justify-center h-full text-slate-500 text-sm gap-2">
-                <div className="w-4 h-4 border-2 border-slate-600 border-t-slate-300 rounded-full animate-spin" />
+              <div className="flex items-center justify-center h-full text-slate-500 text-xs gap-2 bg-[#1e1e1e]">
+                <span className="w-4 h-4 border-2 border-slate-700 border-t-slate-400 rounded-full animate-spin" />
                 Loading editor…
               </div>
             }
             options={{
-              minimap:              { enabled: false },
-              fontSize:             14,
-              fontFamily:           "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-              fontLigatures:        true,
-              tabSize:              4,
-              insertSpaces:         true,
-              wordWrap:             'on',
-              padding:              { top: 16, bottom: 16 },
-              scrollBeyondLastLine: false,
-              smoothScrolling:      true,
-              cursorBlinking:       'smooth',
-              renderLineHighlight:  'gutter',
-              lineNumbers:          'on',
-              glyphMargin:          false,
-              folding:              true,
+              minimap:               { enabled: false },
+              fontSize:              13,
+              fontFamily:            "'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace",
+              fontLigatures:         true,
+              tabSize:               4,
+              insertSpaces:          true,
+              wordWrap:              'off',
+              padding:               { top: 12, bottom: 12 },
+              scrollBeyondLastLine:  false,
+              smoothScrolling:       true,
+              cursorBlinking:        'smooth',
+              cursorSmoothCaretAnimation: 'on',
+              renderLineHighlight:   'gutter',
+              lineNumbers:           'on',
+              glyphMargin:           false,
+              folding:               true,
               bracketPairColorization: { enabled: true },
+              scrollbar: {
+                verticalScrollbarSize: 6,
+                horizontalScrollbarSize: 6,
+              },
             }}
           />
         </div>
 
-        {/* Output panel */}
-        <OutputPanel output={output} isSubmitting={isSubmitting} status={status} />
+        {/* ── BOTTOM PANEL: Testcase / Result ── */}
+        <div className="h-52 bg-[#1a1a1a] border-t border-[#2d2d2d] flex flex-col flex-shrink-0">
+
+          {/* Tab bar */}
+          <div className="flex items-center border-b border-[#2d2d2d] bg-[#222] flex-shrink-0 px-1">
+            {[
+              { key: 'testcase', label: 'Testcase' },
+              { key: 'result',   label: 'Test Result' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setBottomTab(tab.key)}
+                className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors -mb-px ${
+                  bottomTab === tab.key
+                    ? 'border-amber-400 text-amber-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+            {/* Running indicator */}
+            {isRunning && (
+              <div className="ml-auto pr-3 flex items-center gap-1.5 text-xs text-amber-400">
+                <Clock className="w-3 h-3 animate-pulse" />
+                <span>Executing… (Docker may pull image on first run)</span>
+              </div>
+            )}
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {bottomTab === 'testcase'
+              ? <TestCaseTab problem={problem} selCase={selCase} setSelCase={setSelCase} />
+              : <TestResultTab testResults={testResults} />
+            }
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -51,30 +51,33 @@ export const mockProblems = [
       "-10⁹ <= target <= 10⁹",
       "Only one valid answer exists."
     ],
+    // Input encoding: arr = [...nums, target] — last element is the target
+    testCases: [
+      { input: [2, 7, 11, 15, 9],  expected: [0, 1], display: "nums = [2, 7, 11, 15]\ntarget = 9" },
+      { input: [3, 2, 4, 6],        expected: [1, 2], display: "nums = [3, 2, 4]\ntarget = 6" },
+      { input: [3, 3, 6],           expected: [0, 1], display: "nums = [3, 3]\ntarget = 6" },
+    ],
     starterCode: {
       cpp: `class Solution {
 public:
+    // arr = [...nums, target]  (last element is target)
     vector<int> solve(vector<int>& arr) {
-        // arr = [num1, num2, ..., numN, target]
-        // The last element is target; rest are nums
         
     }
 };`,
       java: `class Solution {
+    // arr = [...nums, target]  (last element is target)
     public int[] solve(int[] arr) {
-        // arr = [num1, num2, ..., numN, target]
-        // The last element is target; rest are nums
         
     }
 }`,
       python: `class Solution:
+    # arr = [...nums, target]  (last element is target)
     def solve(self, arr):
-        # arr = [num1, num2, ..., numN, target]
-        # The last element is target; rest are nums
         pass
 `,
-      javascript: `// JavaScript is not yet supported for execution.
-// Please switch to C++, Python, or Java.
+      javascript: `// JavaScript execution not supported yet.
+// Use C++, Python 3, or Java.
 var solve = function(arr) {
     
 };`
@@ -82,63 +85,6 @@ var solve = function(arr) {
   },
   {
     id: 2,
-    title: "Valid Parentheses",
-    difficulty: "Easy",
-    topic: "Stacks",
-    tags: ["String", "Stack"],
-    acceptance: "40.7%",
-    description: "Given a string `s` containing just the characters `'('`, `')'`, `'{'`, `'}'`, `'['` and `']'`, determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.\n3. Every close bracket has a corresponding open bracket of the same type.",
-    examples: [
-      {
-        input: 's = "()"',
-        output: "true",
-        explanation: null
-      },
-      {
-        input: 's = "()[]{}"',
-        output: "true",
-        explanation: null
-      },
-      {
-        input: 's = "(]"',
-        output: "false",
-        explanation: null
-      }
-    ],
-    constraints: [
-      "1 <= s.length <= 10⁴",
-      "s consists of parentheses only '()[]{}'."
-    ],
-    starterCode: {
-      cpp: `class Solution {
-public:
-    vector<int> solve(vector<int>& arr) {
-        // arr contains ASCII values of the string characters
-        // Return [1] for valid, [0] for invalid
-        
-    }
-};`,
-      java: `class Solution {
-    public int[] solve(int[] arr) {
-        // arr contains ASCII values of the string characters
-        // Return [1] for valid, [0] for invalid
-        
-    }
-}`,
-      python: `class Solution:
-    def solve(self, arr):
-        # arr contains ASCII values of the string characters
-        # Return [1] for valid, [0] for invalid
-        pass
-`,
-      javascript: `// JavaScript is not yet supported for execution.
-var solve = function(arr) {
-    
-};`
-    }
-  },
-  {
-    id: 3,
     title: "Best Time to Buy and Sell Stock",
     difficulty: "Easy",
     topic: "Arrays",
@@ -149,7 +95,7 @@ var solve = function(arr) {
       {
         input: "prices = [7,1,5,3,6,4]",
         output: "5",
-        explanation: "Buy on day 2 (price = 1) and sell on day 5 (price = 6), profit = 6-1 = 5."
+        explanation: "Buy on day 2 (price = 1) and sell on day 5 (price = 6), profit = 6-1 = 5. Note that buying on day 2 and selling on day 1 is not allowed because you must buy before you sell."
       },
       {
         input: "prices = [7,6,4,3,1]",
@@ -161,29 +107,91 @@ var solve = function(arr) {
       "1 <= prices.length <= 10⁵",
       "0 <= prices[i] <= 10⁴"
     ],
+    // arr = prices directly; return [maxProfit]
+    testCases: [
+      { input: [7,1,5,3,6,4], expected: [5], display: "prices = [7,1,5,3,6,4]" },
+      { input: [7,6,4,3,1],   expected: [0], display: "prices = [7,6,4,3,1]"   },
+      { input: [1,2],          expected: [1], display: "prices = [1,2]"          },
+    ],
     starterCode: {
       cpp: `class Solution {
 public:
+    // arr = prices[]  →  return [maxProfit]
     vector<int> solve(vector<int>& arr) {
-        // arr = prices array
-        // Return [maxProfit]
         
     }
 };`,
       java: `class Solution {
+    // arr = prices[]  →  return [maxProfit]
     public int[] solve(int[] arr) {
-        // arr = prices array
-        // Return [maxProfit]
         
     }
 }`,
       python: `class Solution:
+    # arr = prices[]  →  return [maxProfit]
     def solve(self, arr):
-        # arr = prices array
-        # Return [maxProfit]
         pass
 `,
-      javascript: `// JavaScript is not yet supported for execution.
+      javascript: `// JavaScript execution not supported yet.
+var solve = function(arr) {
+    
+};`
+    }
+  },
+  {
+    id: 3,
+    title: "Contains Duplicate",
+    difficulty: "Easy",
+    topic: "Arrays",
+    tags: ["Array", "Hash Table", "Sorting"],
+    acceptance: "61.5%",
+    description: "Given an integer array `nums`, return `true` if any value appears **at least twice** in the array, and return `false` if every element is distinct.\n\nReturn `[1]` for true and `[0]` for false.",
+    examples: [
+      {
+        input: "nums = [1,2,3,1]",
+        output: "[1]",
+        explanation: "The element 1 occurs at the indices 0 and 3."
+      },
+      {
+        input: "nums = [1,2,3,4]",
+        output: "[0]",
+        explanation: "All elements are distinct."
+      },
+      {
+        input: "nums = [1,1,1,3,3,4,3,2,4,2]",
+        output: "[1]",
+        explanation: null
+      }
+    ],
+    constraints: [
+      "1 <= nums.length <= 10⁵",
+      "-10⁹ <= nums[i] <= 10⁹"
+    ],
+    testCases: [
+      { input: [1,2,3,1],               expected: [1], display: "nums = [1,2,3,1]" },
+      { input: [1,2,3,4],               expected: [0], display: "nums = [1,2,3,4]" },
+      { input: [1,1,1,3,3,4,3,2,4,2],   expected: [1], display: "nums = [1,1,1,3,3,4,3,2,4,2]" },
+    ],
+    starterCode: {
+      cpp: `class Solution {
+public:
+    // Return [1] if duplicate exists, [0] otherwise
+    vector<int> solve(vector<int>& arr) {
+        
+    }
+};`,
+      java: `class Solution {
+    // Return [1] if duplicate exists, [0] otherwise
+    public int[] solve(int[] arr) {
+        
+    }
+}`,
+      python: `class Solution:
+    # Return [1] if duplicate exists, [0] otherwise
+    def solve(self, arr):
+        pass
+`,
+      javascript: `// JavaScript execution not supported yet.
 var solve = function(arr) {
     
 };`

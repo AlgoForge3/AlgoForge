@@ -1,80 +1,94 @@
-const cppTemplate = `class Solution {
-public:
-    vector<int> solve(vector<int>& arr) {
-        // Write your solution here
-        return arr;
-    }
-};`;
+/**
+ * Multi-testcase wrappers for Docker execution.
+ * Each testCase: { input: number[], expected: number[] }
+ * Output format per line: "TC0:val1,val2,..."
+ */
 
-const cppWrapper = (userCode) => `
+const cppWrapper = (userCode, testCases) => {
+  const blocks = testCases.map((tc, idx) => {
+    const inputVec = tc.input.join(', ');
+    return `
+    // Test Case ${idx}
+    {
+        vector<int> _inp = {${inputVec}};
+        vector<int> _res = Solution().solve(_inp);
+        cout << "TC${idx}:";
+        for (size_t i = 0; i < _res.size(); ++i) {
+            if (i > 0) cout << ",";
+            cout << _res[i];
+        }
+        cout << "\\n";
+    }`;
+  }).join('\n');
+
+  return `
 #include <iostream>
 #include <vector>
-
+#include <algorithm>
+#include <unordered_map>
+#include <string>
+#include <climits>
 using namespace std;
 
 ${userCode}
 
 int main() {
-    Solution sol;
-    vector<int> input = {1, 2, 3, 4, 5};
-    vector<int> result = sol.solve(input);
-    
-    cout << "[";
-    for(size_t i = 0; i < result.size(); ++i) {
-        cout << result[i];
-        if(i != result.size() - 1) cout << ", ";
-    }
-    cout << "]" << endl;
+${blocks}
     return 0;
 }
 `;
+};
 
-const javaTemplate = `class Solution {
-    public int[] solve(int[] arr) {
-        // Write your solution here
-        return arr;
-    }
-}`;
+const javaWrapper = (userCode, testCases) => {
+  const blocks = testCases.map((tc, idx) => {
+    const inputArr = tc.input.join(', ');
+    return `
+        // Test Case ${idx}
+        {
+            int[] _inp = {${inputArr}};
+            int[] _res = new Solution().solve(_inp);
+            StringBuilder _sb = new StringBuilder("TC${idx}:");
+            for (int i = 0; i < _res.length; i++) {
+                if (i > 0) _sb.append(",");
+                _sb.append(_res[i]);
+            }
+            System.out.println(_sb.toString());
+        }`;
+  }).join('\n');
 
-const javaWrapper = (userCode) => `
+  return `
 import java.util.*;
 
 ${userCode}
 
 public class Main {
     public static void main(String[] args) {
-        Solution sol = new Solution();
-        int[] input = {1, 2, 3, 4, 5};
-        int[] result = sol.solve(input);
-        
-        System.out.print("[");
-        for(int i = 0; i < result.length; ++i) {
-            System.out.print(result[i]);
-            if(i != result.length - 1) System.out.print(", ");
-        }
-        System.out.println("]");
+${blocks}
     }
 }
 `;
+};
 
-const pythonTemplate = `class Solution:
-    def solve(self, arr):
-        # Write your solution here
-        return arr
-`;
+const pythonWrapper = (userCode, testCases) => {
+  const blocks = testCases.map((tc, idx) => {
+    const inputList = `[${tc.input.join(', ')}]`;
+    return `
+_res = Solution().solve(${inputList})
+if isinstance(_res, (list, tuple)):
+    print("TC${idx}:" + ",".join(str(x) for x in _res))
+else:
+    print("TC${idx}:" + str(_res))`;
+  }).join('\n');
 
-const pythonWrapper = (userCode) => `
-${userCode}
+  return `${userCode}
 
 if __name__ == "__main__":
-    sol = Solution()
-    input_arr = [1, 2, 3, 4, 5]
-    result = sol.solve(input_arr)
-    print(result)
+${blocks.split('\n').map(l => '    ' + l).join('\n')}
 `;
+};
 
 module.exports = {
-    cpp: { template: cppTemplate, wrapper: cppWrapper },
-    java: { template: javaTemplate, wrapper: javaWrapper },
-    python: { template: pythonTemplate, wrapper: pythonWrapper }
+  cpp:    { wrapper: cppWrapper    },
+  java:   { wrapper: javaWrapper   },
+  python: { wrapper: pythonWrapper },
 };
