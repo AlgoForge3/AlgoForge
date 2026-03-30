@@ -25,23 +25,176 @@ export const mockProblems = [
     title: "Two Sum",
     difficulty: "Easy",
     topic: "Arrays",
-    description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.",
-    starterCode: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        \n    }\n};"
+    tags: ["Array", "Hash Table"],
+    acceptance: "49.1%",
+    description: "Given an array of integers `nums` and an integer `target`, return *indices of the two numbers such that they add up to* `target`.\n\nYou may assume that each input would have **exactly one solution**, and you may not use the same element twice.\n\nYou can return the answer in any order.",
+    examples: [
+      {
+        input: "nums = [2,7,11,15], target = 9",
+        output: "[0,1]",
+        explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]."
+      },
+      {
+        input: "nums = [3,2,4], target = 6",
+        output: "[1,2]",
+        explanation: "Because nums[1] + nums[2] == 6, we return [1, 2]."
+      },
+      {
+        input: "nums = [3,3], target = 6",
+        output: "[0,1]",
+        explanation: null
+      }
+    ],
+    constraints: [
+      "2 <= nums.length <= 10⁴",
+      "-10⁹ <= nums[i] <= 10⁹",
+      "-10⁹ <= target <= 10⁹",
+      "Only one valid answer exists."
+    ],
+    // Input encoding: arr = [...nums, target] — last element is the target
+    testCases: [
+      { input: [2, 7, 11, 15, 9],  expected: [0, 1], display: "nums = [2, 7, 11, 15]\ntarget = 9" },
+      { input: [3, 2, 4, 6],        expected: [1, 2], display: "nums = [3, 2, 4]\ntarget = 6" },
+      { input: [3, 3, 6],           expected: [0, 1], display: "nums = [3, 3]\ntarget = 6" },
+    ],
+    starterCode: {
+      cpp: `class Solution {
+public:
+    // arr = [...nums, target]  (last element is target)
+    vector<int> solve(vector<int>& arr) {
+        
+    }
+};`,
+      java: `class Solution {
+    // arr = [...nums, target]  (last element is target)
+    public int[] solve(int[] arr) {
+        
+    }
+}`,
+      python: `class Solution:
+    # arr = [...nums, target]  (last element is target)
+    def solve(self, arr):
+        pass
+`,
+      javascript: `// JavaScript execution not supported yet.
+// Use C++, Python 3, or Java.
+var solve = function(arr) {
+    
+};`
+    }
   },
   {
     id: 2,
-    title: "Valid Parentheses",
-    difficulty: "Medium",
-    topic: "Stacks",
-    description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.\n\nAn input string is valid if open brackets are closed by the same type of brackets and in the correct order.",
-    starterCode: "class Solution {\npublic:\n    bool isValid(string s) {\n        \n    }\n};"
+    title: "Best Time to Buy and Sell Stock",
+    difficulty: "Easy",
+    topic: "Arrays",
+    tags: ["Array", "Dynamic Programming"],
+    acceptance: "54.3%",
+    description: "You are given an array `prices` where `prices[i]` is the price of a given stock on the `iᵗʰ` day.\n\nYou want to maximize your profit by choosing a **single day** to buy one stock and choosing a **different day in the future** to sell that stock.\n\nReturn *the maximum profit you can achieve from this transaction*. If you cannot achieve any profit, return `0`.",
+    examples: [
+      {
+        input: "prices = [7,1,5,3,6,4]",
+        output: "5",
+        explanation: "Buy on day 2 (price = 1) and sell on day 5 (price = 6), profit = 6-1 = 5. Note that buying on day 2 and selling on day 1 is not allowed because you must buy before you sell."
+      },
+      {
+        input: "prices = [7,6,4,3,1]",
+        output: "0",
+        explanation: "In this case, no transactions are done and the max profit = 0."
+      }
+    ],
+    constraints: [
+      "1 <= prices.length <= 10⁵",
+      "0 <= prices[i] <= 10⁴"
+    ],
+    // arr = prices directly; return [maxProfit]
+    testCases: [
+      { input: [7,1,5,3,6,4], expected: [5], display: "prices = [7,1,5,3,6,4]" },
+      { input: [7,6,4,3,1],   expected: [0], display: "prices = [7,6,4,3,1]"   },
+      { input: [1,2],          expected: [1], display: "prices = [1,2]"          },
+    ],
+    starterCode: {
+      cpp: `class Solution {
+public:
+    // arr = prices[]  →  return [maxProfit]
+    vector<int> solve(vector<int>& arr) {
+        
+    }
+};`,
+      java: `class Solution {
+    // arr = prices[]  →  return [maxProfit]
+    public int[] solve(int[] arr) {
+        
+    }
+}`,
+      python: `class Solution:
+    # arr = prices[]  →  return [maxProfit]
+    def solve(self, arr):
+        pass
+`,
+      javascript: `// JavaScript execution not supported yet.
+var solve = function(arr) {
+    
+};`
+    }
   },
   {
     id: 3,
-    title: "Merge k Sorted Lists",
-    difficulty: "Hard",
-    topic: "Linked Lists",
-    description: "You are given an array of k linked-lists lists, each linked-list is sorted in ascending order.\n\nMerge all the linked-lists into one sorted linked-list and return it.\n\nThe linked-lists are merged by splicing together the nodes of the first two lists, and so on.",
-    starterCode: "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\npublic:\n    ListNode* mergeKLists(vector<ListNode*>& lists) {\n        \n    }\n};"
+    title: "Contains Duplicate",
+    difficulty: "Easy",
+    topic: "Arrays",
+    tags: ["Array", "Hash Table", "Sorting"],
+    acceptance: "61.5%",
+    description: "Given an integer array `nums`, return `true` if any value appears **at least twice** in the array, and return `false` if every element is distinct.\n\nReturn `[1]` for true and `[0]` for false.",
+    examples: [
+      {
+        input: "nums = [1,2,3,1]",
+        output: "[1]",
+        explanation: "The element 1 occurs at the indices 0 and 3."
+      },
+      {
+        input: "nums = [1,2,3,4]",
+        output: "[0]",
+        explanation: "All elements are distinct."
+      },
+      {
+        input: "nums = [1,1,1,3,3,4,3,2,4,2]",
+        output: "[1]",
+        explanation: null
+      }
+    ],
+    constraints: [
+      "1 <= nums.length <= 10⁵",
+      "-10⁹ <= nums[i] <= 10⁹"
+    ],
+    testCases: [
+      { input: [1,2,3,1],               expected: [1], display: "nums = [1,2,3,1]" },
+      { input: [1,2,3,4],               expected: [0], display: "nums = [1,2,3,4]" },
+      { input: [1,1,1,3,3,4,3,2,4,2],   expected: [1], display: "nums = [1,1,1,3,3,4,3,2,4,2]" },
+    ],
+    starterCode: {
+      cpp: `class Solution {
+public:
+    // Return [1] if duplicate exists, [0] otherwise
+    vector<int> solve(vector<int>& arr) {
+        
+    }
+};`,
+      java: `class Solution {
+    // Return [1] if duplicate exists, [0] otherwise
+    public int[] solve(int[] arr) {
+        
+    }
+}`,
+      python: `class Solution:
+    # Return [1] if duplicate exists, [0] otherwise
+    def solve(self, arr):
+        pass
+`,
+      javascript: `// JavaScript execution not supported yet.
+var solve = function(arr) {
+    
+};`
+    }
   }
 ];
