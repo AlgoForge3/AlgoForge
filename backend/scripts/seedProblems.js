@@ -9,6 +9,9 @@
 
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 const Problem  = require('../models/Problem');
 
 // ── Seed Data ─────────────────────────────────────────────────────────────────
