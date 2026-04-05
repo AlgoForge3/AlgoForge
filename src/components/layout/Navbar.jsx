@@ -1,9 +1,9 @@
 import { useUserStore } from '../../store/useUserStore'
 import { Link, useNavigate } from 'react-router-dom'
-import { Code2, LogOut, User } from 'lucide-react'
+import { Code2, LogOut, User, Compass } from 'lucide-react'
 
 export const Navbar = () => {
-  const { user, userLevel, logout } = useUserStore()
+  const { user, userLevel, isGuest, logout, setGuestMode, exitGuestMode } = useUserStore()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -11,38 +11,109 @@ export const Navbar = () => {
     navigate('/login')
   }
 
+  const handleGuestMode = () => {
+    setGuestMode()
+    navigate('/dashboard')
+  }
+
+  const handleExitGuest = () => {
+    exitGuestMode()
+    navigate('/login')
+  }
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60 transition-all">
-      <div className="container mx-auto flex h-16 items-center px-4">
-        <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <Code2 className="h-6 w-6 text-blue-500" />
-          <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
-            AlgoForge
-          </span>
+    <header style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 50,
+      width: '100%',
+      borderBottom: '1px solid rgba(139, 92, 246, 0.1)',
+      background: 'rgba(8, 8, 15, 0.85)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', height: '60px', padding: '0 20px' }}>
+        {/* Logo */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+          <div style={{
+            width: '32px', height: '32px',
+            background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+            borderRadius: '8px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Code2 style={{ width: '16px', height: '16px', color: 'white' }} />
+          </div>
+          <span className="shimmer-text" style={{ fontSize: '1.1rem', fontWeight: 700 }}>AlgoForge</span>
         </Link>
-        <div className="flex-1" />
-        <nav className="flex items-center gap-4">
+
+        <div style={{ flex: 1 }} />
+
+        {/* Nav Actions */}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {user ? (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-1.5 rounded-full border border-slate-700 shadow-sm transition-all hover:bg-slate-800/70">
-                <User className="w-4 h-4 text-slate-400" />
-                <span className="text-sm font-medium text-slate-300">{user.name}</span>
-                <span className="text-slate-600 px-1">•</span>
-                <span className="text-sm font-bold text-white tracking-wide">{user.currentLevel || userLevel}</span>
+            /* Logged-in User */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: 'rgba(124, 58, 237, 0.08)',
+                border: '1px solid rgba(124, 58, 237, 0.2)',
+                padding: '6px 14px', borderRadius: '999px',
+              }}>
+                <User style={{ width: '14px', height: '14px', color: '#a78bfa' }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#e2e0ff' }}>{user.name}</span>
+                <span style={{ color: 'rgba(139, 92, 246, 0.4)', padding: '0 4px' }}>•</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#a78bfa' }}>{user.currentLevel || userLevel}</span>
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-rose-400 transition-colors"
-                title="Logout"
+              <button onClick={handleLogout} title="Logout" style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: 'var(--text-muted)', padding: '6px', borderRadius: '6px',
+                transition: 'color 0.2s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut style={{ width: '15px', height: '15px' }} />
+              </button>
+            </div>
+          ) : isGuest ? (
+            /* Guest Mode active */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{
+                fontSize: '0.75rem', color: '#a78bfa',
+                background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)',
+                padding: '4px 10px', borderRadius: '999px', fontWeight: 500,
+              }}>👁️ Guest View</span>
+              <button onClick={handleExitGuest} className="btn-guest" style={{ fontSize: '0.78rem' }}>
+                Sign In
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-500 font-medium px-2 py-1">Guest Mode</span>
-              <Link to="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Log in</Link>
-              <Link to="/register" className="text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-md transition-colors">Sign up</Link>
+            /* Not logged in */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button onClick={handleGuestMode} className="btn-guest">
+                <Compass style={{ width: '13px', height: '13px' }} />
+                Explore as Guest
+              </button>
+              <Link to="/login" style={{
+                fontSize: '0.85rem', fontWeight: 500,
+                color: 'var(--text-muted)', textDecoration: 'none',
+                padding: '7px 14px', borderRadius: '8px',
+                transition: 'color 0.2s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+              >Log in</Link>
+              <Link to="/register" style={{
+                fontSize: '0.85rem', fontWeight: 600,
+                background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+                color: 'white', textDecoration: 'none',
+                padding: '7px 16px', borderRadius: '8px',
+                transition: 'opacity 0.2s, transform 0.15s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = '0.9'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
+              >Sign up</Link>
             </div>
           )}
         </nav>
