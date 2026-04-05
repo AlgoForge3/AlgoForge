@@ -1,85 +1,15 @@
 const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const router  = express.Router();
+const { register, login, googleLogin } = require('../controllers/authController');
 
-// Generate JWT
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
-  });
-};
+// @route  POST /api/auth/register
+router.post('/register', register);
 
-// @desc    Register new user
-// @route   POST /api/auth/register
-// @access  Public
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+// @route  POST /api/auth/login
+router.post('/login', login);
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Please add all fields' });
-    }
-
-    // Check if user exists
-    const userExists = await User.findOne({ email });
-
-    if (userExists) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
-    if (user) {
-      res.status(201).json({
-        _id: user.id,
-        name: user.name,
-        email: user.email,
-        currentLevel: user.currentLevel,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(400).json({ error: 'Invalid user data' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Server error during registration.' });
-  }
-});
-
-// @desc    Authenticate a user
-// @route   POST /api/auth/login
-// @access  Public
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Check for user email
-    const user = await User.findOne({ email });
-
-    if (user && (await bcrypt.compare(password, user.password))) {
-      res.json({
-        _id: user.id,
-        name: user.name,
-        email: user.email,
-        currentLevel: user.currentLevel,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(400).json({ error: 'Invalid credentials' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Server error during login.' });
-  }
-});
+// @route  POST /api/auth/google
+// @desc   Verify Google ID token, login or auto-register the user
+router.post('/google', googleLogin);
 
 module.exports = router;
