@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { useUserStore } from '../store/useUserStore';
 import api from '../utils/api';
 import { Loader2, Mail, Lock, Code2, Eye, EyeOff } from 'lucide-react';
@@ -41,23 +41,19 @@ export const Login = () => {
 
   const [gLoading, setGLoading] = useState(false);
 
-  const googleLogin = useGoogleLogin({
-    flow: 'implicit',
-    onSuccess: async (tokenResponse) => {
-      setGLoading(true);
-      setError('');
-      try {
-        const { data } = await api.post('/auth/google', { token: tokenResponse.access_token });
-        login(data, data.token);
-        navigate('/dashboard');
-      } catch (err) {
-        setError(err.response?.data?.error || 'Google sign-in failed. Please try again.');
-      } finally {
-        setGLoading(false);
-      }
-    },
-    onError: () => setError('Google sign-in was cancelled or failed.'),
-  });
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setGLoading(true);
+    setError('');
+    try {
+      const { data } = await api.post('/auth/google', { token: credentialResponse.credential });
+      login(data, data.token);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGLoading(false);
+    }
+  };
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative', overflow: 'hidden' }}>
@@ -121,16 +117,23 @@ export const Login = () => {
         </AnimatePresence>
 
         {/* Google Sign-In */}
-        <motion.button
-          onClick={() => googleLogin()}
-          className="btn-google"
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          style={{ marginBottom: '20px' }}
-        >
-          <GoogleIcon />
-          Continue with Google
-        </motion.button>
+        <div style={{ marginBottom: '20px' }}>
+          {gLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+              <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+              Signing in with Google...
+            </div>
+          ) : (
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Google sign-in was cancelled or failed.')}
+              theme="filled_black"
+              size="large"
+              width="100%"
+              text="continue_with"
+            />
+          )}
+        </div>
 
         {/* Divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
