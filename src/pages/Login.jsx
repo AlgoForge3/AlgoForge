@@ -31,7 +31,7 @@ export const Login = () => {
     try {
       const { data } = await api.post('/auth/login', { email, password });
       login(data, data.token);
-      navigate('/dashboard');
+      navigate(data.assessmentCompleted ? '/dashboard' : '/assessment');
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
     } finally {
@@ -47,7 +47,7 @@ export const Login = () => {
     try {
       const { data } = await api.post('/auth/google', { token: credentialResponse.credential });
       login(data, data.token);
-      navigate('/dashboard');
+      navigate(data.assessmentCompleted ? '/dashboard' : '/assessment');
     } catch (err) {
       setError(err.response?.data?.error || 'Google sign-in failed. Please try again.');
     } finally {

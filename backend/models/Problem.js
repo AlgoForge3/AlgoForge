@@ -40,10 +40,12 @@ const problemSchema = new mongoose.Schema(
     problemNumber: { type: Number, required: true, unique: true },
 
     title:       { type: String, required: true, trim: true },
+    titleSlug:   { type: String, unique: true, sparse: true, trim: true },
     difficulty:  { type: String, enum: ['Easy', 'Medium', 'Hard'], required: true },
     description: { type: String, required: true },
-    topics:      { type: [String], default: [] },   // e.g. ['Array', 'Hash Table']
-    acceptance:  { type: String, default: '' },     // e.g. "49.1%"
+    topics:      { type: [String], default: [] },
+    acceptance:  { type: String, default: '' },
+    isSkeleton:  { type: Boolean, default: false },
 
     // ── Execution metadata ──────────────────────────────────────────────────
     functionName: { type: String, required: true }, // e.g. "twoSum"

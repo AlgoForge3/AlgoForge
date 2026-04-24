@@ -1,13 +1,12 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, Navigate, useNavigate } from 'react-router-dom'
 import { Editor } from '@monaco-editor/react'
-import { mockProblems } from '../utils/dummyData'
 import { useUserStore } from '../store/useUserStore'
 import api from '../utils/api'
 import {
   Play, ChevronLeft, ChevronRight,
   CheckCircle, XCircle, AlertCircle,
-  Clock, Tag, FileCode, RotateCcw,
+  Clock, Tag, FileCode, RotateCcw, Loader2,
 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -38,7 +37,7 @@ function DescriptionPanel({ problem }) {
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${d.text} ${d.bg}`}>
             {problem.difficulty}
           </span>
-          {problem.tags?.map(t => (
+          {problem.topics?.map(t => (
             <span key={t} className="flex items-center gap-1 text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">
               <Tag className="w-2.5 h-2.5" />{t}
             </span>
@@ -100,12 +99,15 @@ function DescriptionPanel({ problem }) {
 
 /** Bottom panel: Test Cases tab */
 function TestCaseTab({ problem, selCase, setSelCase }) {
-  const tc = problem.testCases?.[selCase]
+  // Build display data from examples since testCases are hidden server-side
+  const displayCases = problem.examples?.map(ex => ({ display: `${ex.input}` })) || []
+  const tc = displayCases[selCase]
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Case selector pills */}
       <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
-        {problem.testCases?.map((_, i) => (
+        {displayCases.map((_, i) => (
           <button
             key={i}
             onClick={() => setSelCase(i)}
@@ -246,18 +248,73 @@ export const Problem = () => {
   const [selCase, setSelCase]         = useState(0)
   const editorRef = useRef(null)
 
-  const problem = mockProblems.find(p => p.id === parseInt(id))
-  if (!problem) return <Navigate to="/dashboard" replace />
+  // ── Fetch problem from API ──────────────────────────────────────────
+  const [problem, setProblem]       = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [fetchError, setFetchError] = useState('')
+  const [allProblems, setAllProblems] = useState([])
+
+  useEffect(() => {
+    const fetchProblem = async () => {
+      setLoading(true)
+      setFetchError('')
+      try {
+        const [{ data: prob }, { data: all }] = await Promise.all([
+          api.get(`/problems/${id}`),
+          api.get('/problems'),
+        ])
+        setProblem(prob)
+        setAllProblems(all)
+      } catch (err) {
+        console.error('Failed to fetch problem:', err)
+        setFetchError(err.response?.data?.error || 'Failed to load problem.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProblem()
+  }, [id])
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)] bg-[#1a1a1a] text-slate-400 gap-3">
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span className="text-sm">Loading problem...</span>
+      </div>
+    )
+  }
+
+  // Error / not found
+  if (fetchError || !problem) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] bg-[#1a1a1a] text-center px-4">
+        <AlertCircle className="w-10 h-10 text-rose-400 mb-4" />
+        <h2 className="text-lg font-bold text-white mb-2">Problem Not Found</h2>
+        <p className="text-sm text-slate-400 mb-6">{fetchError || `Problem #${id} doesn't exist.`}</p>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors"
+        >
+          ← Back to Dashboard
+        </button>
+      </div>
+    )
+  }
 
   const currentLang = LANGS.find(l => l.value === lang) || LANGS[0]
   const d = DIFFICULTY[problem.difficulty] || DIFFICULTY.Easy
-  const problemIdx  = mockProblems.findIndex(p => p.id === parseInt(id))
+
+  // Find prev/next based on real problems list
+  const problemIdx  = allProblems.findIndex(p => p.problemNumber === parseInt(id))
+  const prevProblem = allProblems[problemIdx - 1]
+  const nextProblem = allProblems[problemIdx + 1]
 
   const handleEditorMount = (editor) => { editorRef.current = editor }
 
   const resetEditor = () => {
     if (editorRef.current) {
-      editorRef.current.setValue(problem.starterCode[lang] || '')
+      editorRef.current.setValue(problem.starterCode?.[lang] || '')
     }
     setTestResults(null)
     setBottomTab('testcase')
@@ -280,13 +337,13 @@ export const Problem = () => {
     setTestResults(null)
     setBottomTab('result')
 
-    const code = editorRef.current?.getValue() || (problem.starterCode[lang] ?? '')
+    const code = editorRef.current?.getValue() || (problem.starterCode?.[lang] ?? '')
 
     try {
       const { data } = await api.post('/execute', {
         language:  lang,
         code,
-        problemId: problem.id,
+        problemId: problem.problemNumber,
       })
 
       if (data.error) {
@@ -315,15 +372,15 @@ export const Problem = () => {
           </button>
           {/* Prev / Next arrows */}
           <div className="ml-auto flex items-center gap-0.5 pr-2">
-            {mockProblems[problemIdx - 1] && (
-              <a href={`/problem/${mockProblems[problemIdx - 1].id}`}
+            {prevProblem && (
+              <a href={`/problem/${prevProblem.problemNumber}`}
                  className="p-1.5 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
                  title="Previous problem">
                 <ChevronLeft className="w-4 h-4" />
               </a>
             )}
-            {mockProblems[problemIdx + 1] && (
-              <a href={`/problem/${mockProblems[problemIdx + 1].id}`}
+            {nextProblem && (
+              <a href={`/problem/${nextProblem.problemNumber}`}
                  className="p-1.5 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
                  title="Next problem">
                 <ChevronRight className="w-4 h-4" />
@@ -387,7 +444,7 @@ export const Problem = () => {
             height="100%"
             theme="vs-dark"
             language={currentLang.monaco}
-            value={problem.starterCode[lang] || ''}
+            value={problem.starterCode?.[lang] || ''}
             onMount={handleEditorMount}
             loading={
               <div className="flex items-center justify-center h-full text-slate-500 text-xs gap-2 bg-[#1e1e1e]">

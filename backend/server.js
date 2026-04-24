@@ -8,6 +8,8 @@ const Submission = require('./models/Submission');
 const User       = require('./models/User');
 const { executeCode } = require('./services/dockerService');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const assessmentRoutes = require('./routes/assessmentRoutes');
 const { protect } = require('./middleware/authMiddleware');
 
 const app  = express();
@@ -23,8 +25,25 @@ app.use(bodyParser.json());
 // ── Auth Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 
+// ── User Routes ────────────────────────────────────────────────────────────────
+app.use('/api/user', userRoutes);
+
+// ── Assessment Routes ──────────────────────────────────────────────────────────
+app.use('/api/assessment', assessmentRoutes);
+
 // ── Problem Routes ─────────────────────────────────────────────────────────────
 
+const { syncLeetcodeProblems } = require('./controllers/leetcodeController');
+
+/**
+ * POST /api/problems/leetcode/sync
+ * Syncs Leetcode problems to local DB
+ */
+app.post('/api/problems/leetcode/sync', syncLeetcodeProblems);
+app.post('/api/problems/seed-all', async (req, res) => {
+  const { seedAllLeetcode } = require('./controllers/leetcodeController');
+  await seedAllLeetcode(req, res);
+});
 /**
  * GET /api/problems
  * Returns all problems (lightweight: no testCases field).
@@ -49,12 +68,30 @@ app.get('/api/problems', async (req, res) => {
  */
 app.get('/api/problems/:id', async (req, res) => {
   try {
-    const problem = await Problem
-      .findOne({ problemNumber: Number(req.params.id) })
-      .select('-testCases');        // keep testCases secret
-    if (!problem) {
-      return res.status(404).json({ error: `Problem #${req.params.id} not found.` });
+    const idParam = req.params.id;
+    const isNumeric = !isNaN(Number(idParam));
+    let query = isNumeric ? { problemNumber: Number(idParam) } : { titleSlug: idParam };
+
+    let problem = await Problem.findOne(query).select('-testCases');
+    
+    // If not found, or it's a skeleton we haven't fetched full data for yet
+    if ((!problem || problem.isSkeleton) && !isNumeric) {
+      console.log(`[Auto-Sync] Fetching full details for ${idParam} from LeetCode...`);
+      const { syncLeetcodeProblems } = require('./controllers/leetcodeController');
+      const fakeReq = { body: { slugs: [idParam] } };
+      const fakeRes = { status: () => ({ json: () => {} }), json: () => {} };
+      await syncLeetcodeProblems(fakeReq, fakeRes);
+      
+      // Retry fetching from DB after sync
+      problem = await Problem.findOne(query).select('-testCases');
     }
+
+    if (!problem) {
+      return res.status(404).json({ error: `Problem ${idParam} not found.` });
+    }
+    
+    // For problems loaded from LeetCode, we might want to return HTML safely, 
+    // but the frontend handles `dangerouslySetInnerHTML` or markdown rendering.
     return res.json(problem);
   } catch (err) {
     console.error(err);
@@ -103,10 +140,12 @@ app.post('/api/execute', protect, async (req, res) => {
   try {
     const result = await executeCode(language, code, problemMeta, problem.testCases);
     const executionTime = Date.now() - startTime;
+    console.log(`[Execute] User ${req.user._id} (${req.user.name}) result:`, result.results?.length, "test cases");
 
     if (result.error) {
       // Save failed submission
       await Submission.create({
+        userId:        req.user._id,
         problemId:     problem._id,
         problemNumber: problem.problemNumber,
         language,
@@ -127,6 +166,7 @@ app.post('/api/execute', protect, async (req, res) => {
 
     // Save submission
     await Submission.create({
+      userId:        req.user._id,
       problemId:     problem._id,
       problemNumber: problem.problemNumber,
       language,

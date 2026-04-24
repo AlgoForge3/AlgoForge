@@ -8,14 +8,29 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // ── Helper ─────────────────────────────────────────────────────────────────
 const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
+const generateUniqueUsername = async (email, name) => {
+  let baseUsername = (name || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (baseUsername.length < 3) baseUsername += 'user';
+  let username = baseUsername;
+  let counter = Math.floor(Math.random() * 1000);
+  while (await User.findOne({ username })) {
+    username = `${baseUsername}${counter}`;
+    counter++;
+  }
+  return username;
+};
+
 const userPayload = (user) => ({
-  _id:          user.id,
-  name:         user.name,
-  email:        user.email,
-  picture:      user.picture || null,
-  currentLevel: user.currentLevel,
-  authProvider: user.authProvider || 'local',
-  token:        generateToken(user._id),
+  _id:                 user.id,
+  name:                user.name,
+  username:            user.username,
+  email:               user.email,
+  picture:             user.picture || null,
+  currentLevel:        user.currentLevel,
+  assessmentCompleted: user.assessmentCompleted || false,
+  assessmentScore:     user.assessmentScore,
+  authProvider:        user.authProvider || 'local',
+  token:               generateToken(user._id),
 });
 
 // ── @desc   Register a new user
@@ -27,9 +42,13 @@ const register = async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const user = await User.create({ name, email, password: hashedPassword });
+    
+    const username = await generateUniqueUsername(email, name);
+
+    const user = await User.create({ name, username, email, password: hashedPassword });
     return res.status(201).json(userPayload(user));
   } catch (err) {
+    console.error('Registration error:', err);
     res.status(500).json({ error: 'Registration error.' });
   }
 };
@@ -96,9 +115,11 @@ const googleLogin = async (req, res) => {
       const randomPassword = require('crypto').randomBytes(32).toString('hex');
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(randomPassword, salt);
+      const username = await generateUniqueUsername(email, name);
 
       user = await User.create({
         name: name || email.split('@')[0],
+        username,
         email,
         password: hashedPassword,
         googleId,
