@@ -240,22 +240,68 @@ ${blocks.split('\n').map(l => '    ' + l).join('\n')}
 `;
 }
 
+// ── JavaScript helpers ────────────────────────────────────────────────────────
+
+function jsLiteral(value) {
+  if (value === undefined) return 'undefined';
+  return JSON.stringify(value);
+}
+
+function jsPrintResult(returnType, resultVar, idxStr) {
+  const t = returnType.replace(/\s/g, '');
+  if (t === 'vector<int>' || t.startsWith('vector') || t.startsWith('List') || t.endsWith('[]')) {
+    return `
+    if (Array.isArray(${resultVar})) {
+        console.log("TC${idxStr}:" + ${resultVar}.join(','));
+    } else {
+        console.log("TC${idxStr}:" + ${resultVar});
+    }`;
+  }
+  if (t === 'bool' || t === 'boolean') {
+    return `
+    console.log("TC${idxStr}:" + (${resultVar} ? "true" : "false"));`;
+  }
+  return `
+    console.log("TC${idxStr}:" + ${resultVar});`;
+}
+
+function generateJavascriptWrapper(userCode, problemMeta, testCases) {
+  const { functionName, returnType, parameters } = problemMeta;
+
+  const blocks = testCases.map((tc, idx) => {
+    const argLiterals = parameters.map(p => jsLiteral(tc.inputs[p.name])).join(', ');
+    const resultVar   = `_result_${idx}`;
+    const printBlock  = jsPrintResult(returnType, resultVar, idx);
+    return `
+// ── Test Case ${idx} ──
+{
+    let ${resultVar} = ${functionName}(${argLiterals});${printBlock}
+}`;
+  }).join('\n');
+
+  return `${userCode}
+
+${blocks}
+`;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Generate a complete, compilable source file.
  *
- * @param {string} language     - 'cpp' | 'java' | 'python'
- * @param {string} userCode     - The Solution class written by the user
+ * @param {string} language     - 'cpp' | 'java' | 'python' | 'javascript'
+ * @param {string} userCode     - The Solution user code
  * @param {object} problemMeta  - { functionName, returnType, parameters }
  * @param {Array}  testCases    - [{ inputs: {...}, expected: ... }]
  * @returns {string} Full source code ready for Docker
  */
 function generateWrapper(language, userCode, problemMeta, testCases) {
   switch (language) {
-    case 'cpp':    return generateCppWrapper(userCode, problemMeta, testCases);
-    case 'java':   return generateJavaWrapper(userCode, problemMeta, testCases);
-    case 'python': return generatePythonWrapper(userCode, problemMeta, testCases);
+    case 'cpp':        return generateCppWrapper(userCode, problemMeta, testCases);
+    case 'java':       return generateJavaWrapper(userCode, problemMeta, testCases);
+    case 'python':     return generatePythonWrapper(userCode, problemMeta, testCases);
+    case 'javascript': return generateJavascriptWrapper(userCode, problemMeta, testCases);
     default: throw new Error(`Unsupported language: ${language}`);
   }
 }

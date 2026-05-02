@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useState, useMemo } from 'react'
 import { Navigate, Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -10,6 +11,14 @@ import {
   Zap, TrendingUp, CheckCircle, Loader2, Search,
   Lock, Users, Bookmark, Filter, ArrowRight
 } from 'lucide-react'
+=======
+import { useEffect, useState } from 'react'
+import { Navigate, Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { useUserStore } from '../store/useUserStore'
+import api from '../utils/api'
+import { Zap, TrendingUp, Target, ArrowRight, Lock, CheckCircle } from 'lucide-react'
+>>>>>>> origin/main
 
 /* ── Topic Mapping ─────────────────────────────────────────────────────────── */
 const TOPIC_KEYWORDS = {
@@ -119,6 +128,19 @@ export const Dashboard = () => {
   const { userLevel, isGuest, user } = useUserStore()
   const { bookmarks } = useBookmarkStore()
   const navigate = useNavigate()
+  
+  const [dbProblems, setDbProblems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/problems').then(res => {
+      setDbProblems(res.data)
+      setLoading(false)
+    }).catch(err => {
+      console.error(err)
+      setLoading(false)
+    })
+  }, [])
 
   const [problems, setProblems] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -129,7 +151,17 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+<<<<<<< HEAD
   if (!userLevel && !isGuest) return <Navigate to="/assessment" replace />
+=======
+  const getRecommendation = () => {
+    if (!dbProblems.length) return null
+    let targetDifficulty = 'Easy'
+    if (userLevel === 'Intermediate') targetDifficulty = 'Medium'
+    if (userLevel === 'Advanced')     targetDifficulty = 'Hard'
+    return dbProblems.find(p => p.difficulty === targetDifficulty) || dbProblems[0]
+  }
+>>>>>>> origin/main
 
   useEffect(() => {
     const fetchData = async () => {
@@ -181,12 +213,15 @@ export const Dashboard = () => {
   const solvedCount = stats?.solvedCount ?? (isGuest ? '—' : '0')
   const displayName = user?.name || (isGuest ? 'Explorer' : 'Learner')
 
+<<<<<<< HEAD
   const diffCounts = useMemo(() => ({
     Easy: problems.filter(p => p.difficulty === 'Easy').length,
     Medium: problems.filter(p => p.difficulty === 'Medium').length,
     Hard: problems.filter(p => p.difficulty === 'Hard').length,
   }), [problems])
 
+=======
+>>>>>>> origin/main
   const handleSolve = (problemNumber) => {
     if (isGuest) {
       alert('Please sign in or create a free account to solve problems!')
@@ -197,6 +232,7 @@ export const Dashboard = () => {
   }
 
   if (loading) {
+<<<<<<< HEAD
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 4rem)', gap: '12px', color: 'var(--text-muted)' }}>
         <Loader2 style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
@@ -204,6 +240,9 @@ export const Dashboard = () => {
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
+=======
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'white' }}>Loading Dashboard...</div>
+>>>>>>> origin/main
   }
 
   return (
@@ -274,11 +313,63 @@ export const Dashboard = () => {
         <ProgressRing solved={typeof solvedCount === 'number' ? solvedCount : 0} total={problems.length} />
       </motion.div>
 
+<<<<<<< HEAD
       {/* ── Stats Row ────────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <StatCard label="Problems Solved" value={solvedCount} icon={CheckCircle} color="#34d399" />
         <StatCard label="Total Problems" value={problems.length} icon={Zap} color="#fbbf24" />
         <StatCard label="Saved Questions" value={bookmarks.length} icon={Bookmark} color="#a78bfa" />
+=======
+          {/* Problem Card */}
+          {recommended ? (
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              onClick={() => handleSolve(recommended.problemNumber)}
+              style={{
+                background: 'rgba(8,8,15,0.6)', border: '1px solid var(--border)',
+                borderRadius: '12px', padding: '16px', marginBottom: '16px',
+                cursor: 'pointer', transition: 'border-color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{
+                  fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+                  color: difficultyStyle(recommended.difficulty).color,
+                  background: difficultyStyle(recommended.difficulty).bg,
+                  border: `1px solid ${difficultyStyle(recommended.difficulty).border}`,
+                  padding: '3px 8px', borderRadius: '5px',
+                }}>{recommended.difficulty}</span>
+                <span style={{
+                  fontSize: '0.72rem', color: 'var(--text-muted)',
+                  background: 'rgba(255,255,255,0.04)', padding: '3px 8px', borderRadius: '5px',
+                }}>{recommended.topics?.[0] || 'Algorithm'}</span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {recommended.title}
+              </h3>
+            </motion.div>
+          ) : (
+             <div style={{color: 'grey', fontSize: '13px', marginBottom: '16px'}}>No problems available</div>
+          )}
+
+          <motion.button
+            onClick={() => recommended && handleSolve(recommended.problemNumber)}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.97 }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
+              color: 'white', fontWeight: 700, fontSize: '0.875rem',
+              padding: '12px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(124,58,237,0.3)',
+            }}
+          >
+            {isGuest ? <><Lock style={{ width: '14px' }} /> Sign In to Solve</> : <>Solve Now <ArrowRight style={{ width: '14px' }} /></>}
+          </motion.button>
+        </motion.div>
+>>>>>>> origin/main
       </div>
 
       {/* ── Action Bar ───────────────────────────────────────────────────────── */}
@@ -290,6 +381,7 @@ export const Dashboard = () => {
           marginBottom: '20px',
         }}
       >
+<<<<<<< HEAD
         {/* Group Study */}
         <motion.button
           whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
@@ -341,6 +433,54 @@ export const Dashboard = () => {
                 transition: 'all 0.15s',
               }}
             >{d}</motion.button>
+=======
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Problem Set</h2>
+        </div>
+        {dbProblems.map((p, i) => {
+          const ds = difficultyStyle(p.difficulty)
+          return (
+            <motion.div
+              key={p._id || p.problemNumber}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.35 + i * 0.08 }}
+              onClick={() => handleSolve(p.problemNumber)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 24px', cursor: 'pointer',
+                borderBottom: i < dbProblems.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,58,237,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', fontWeight: 600, minWidth: '24px' }}>
+                  {String(p.problemNumber).padStart(2, '0')}
+                </span>
+                <div>
+                  <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-primary)' }}>{p.title}</span>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    {p.topics?.slice(0,2).map(t => (
+                      <span key={t} style={{
+                        fontSize: '0.7rem', color: 'var(--text-subtle)',
+                        background: 'rgba(255,255,255,0.04)', padding: '2px 7px', borderRadius: '4px',
+                      }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{
+                  fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+                  color: ds.color, background: ds.bg, border: `1px solid ${ds.border}`,
+                  padding: '4px 10px', borderRadius: '6px',
+                }}>{p.difficulty}</span>
+                <ArrowRight style={{ width: '14px', height: '14px', color: 'var(--text-subtle)' }} />
+              </div>
+            </motion.div>
+>>>>>>> origin/main
           )
         })}
       </motion.div>

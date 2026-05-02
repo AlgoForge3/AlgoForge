@@ -180,13 +180,21 @@ async function executeCode(language, userCode, problemMeta, testCases) {
       break;
     case 'java':
       fileName   = 'Main.java';
+<<<<<<< HEAD
       dockerImage = 'openjdk:17-slim';
       runCommand = 'javac Main.java && java Main';
+=======
+      runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app openjdk:17-jdk-slim sh -c "javac Main.java && java Main"`;
+>>>>>>> origin/main
       break;
     case 'python':
       fileName   = 'script.py';
       dockerImage = 'python:3.9-slim';
       runCommand = 'python script.py';
+      break;
+    case 'javascript':
+      fileName   = 'script.js';
+      runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app node:18-alpine sh -c "node script.js"`;
       break;
     default:
       return { error: `Unsupported language: ${language}` };

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useState, useRef, useEffect } from 'react'
+=======
+import { useEffect, useState, useRef } from 'react'
+>>>>>>> origin/main
 import { useParams, Navigate, useNavigate } from 'react-router-dom'
 import { Editor } from '@monaco-editor/react'
 import { useUserStore } from '../store/useUserStore'
@@ -346,12 +350,18 @@ export const Problem = () => {
   const [testResults, setTestResults] = useState(null)
   const [bottomTab, setBottomTab]     = useState('testcase')
   const [selCase, setSelCase]         = useState(0)
+<<<<<<< HEAD
   const [editorValue, setEditorValue] = useState('')
   const [draftState, setDraftState] = useState('starter')
   const [leftPanelWidth, setLeftPanelWidth] = useState(DEFAULT_LEFT_PANEL_WIDTH)
   const [bottomPanelHeight, setBottomPanelHeight] = useState(DEFAULT_BOTTOM_PANEL_HEIGHT)
   const [isResizingSplit, setIsResizingSplit] = useState(false)
   const [isResizingPanel, setIsResizingPanel] = useState(false)
+=======
+  const [problem, setProblem]         = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [errorFetching, setErrorFetching] = useState(false)
+>>>>>>> origin/main
   const editorRef = useRef(null)
   const editorValueRef = useRef('')
   const workspaceRef = useRef(null)
@@ -367,6 +377,7 @@ export const Problem = () => {
     startWidth: DEFAULT_LEFT_PANEL_WIDTH,
   })
 
+<<<<<<< HEAD
   // ── Fetch problem from API ──────────────────────────────────────────
   const [problem, setProblem]       = useState(null)
   const [loading, setLoading]       = useState(true)
@@ -385,6 +396,26 @@ export const Problem = () => {
           api.get('/problems'),
         ])
         setAllProblems(all)
+=======
+  useEffect(() => {
+    api.get(`/problems/${id}`)
+      .then(res => {
+        setProblem(res.data)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setErrorFetching(true)
+        setLoading(false)
+      })
+  }, [id])
+
+  if (loading) return <div className="flex h-screen items-center justify-center bg-[#1a1a1a] text-white">Loading Problem...</div>
+  if (errorFetching || !problem) return <Navigate to="/dashboard" replace />
+
+  const currentLang = LANGS.find(l => l.value === lang) || LANGS[0]
+  const d = DIFFICULTY[problem.difficulty] || DIFFICULTY.Easy
+>>>>>>> origin/main
 
         // If this is a skeleton problem, auto-fetch full data from LeetCode
         const isSkel = prob.isSkeleton ||
@@ -594,6 +625,7 @@ export const Problem = () => {
       return;
     }
 
+<<<<<<< HEAD
     if (lang === 'javascript') {
       setTestResults({ error: 'JavaScript execution is not yet supported.\nPlease switch to C++, Python 3, or Java.' })
       setBottomTab('result')
@@ -605,6 +637,9 @@ export const Problem = () => {
     if (action === 'run') setIsRunning(true)
     else setIsSubmitting(true)
     
+=======
+    setIsRunning(true)
+>>>>>>> origin/main
     setTestResults(null)
     setBottomTab('result')
 
@@ -614,8 +649,12 @@ export const Problem = () => {
       const { data } = await api.post('/execute', {
         language:  lang,
         code,
+<<<<<<< HEAD
         problemId: problem?.problemNumber,
         action: action
+=======
+        problemId: problem.problemNumber,
+>>>>>>> origin/main
       })
 
       if (data.error) {
@@ -806,14 +845,20 @@ export const Problem = () => {
           </button>
           {/* Prev / Next arrows */}
           <div className="ml-auto flex items-center gap-0.5 pr-2">
+<<<<<<< HEAD
             {prevProblem && (
               <a href={`/problem/${prevProblem.problemNumber}`}
                  onClick={flushCurrentDraft}
+=======
+            {problem.problemNumber > 1 && (
+              <a href={`/problem/${problem.problemNumber - 1}`}
+>>>>>>> origin/main
                  className="p-1.5 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
                  title="Previous problem">
                 <ChevronLeft className="w-4 h-4" />
               </a>
             )}
+<<<<<<< HEAD
             {nextProblem && (
               <a href={`/problem/${nextProblem.problemNumber}`}
                  onClick={flushCurrentDraft}
@@ -822,6 +867,13 @@ export const Problem = () => {
                 <ChevronRight className="w-4 h-4" />
               </a>
             )}
+=======
+            <a href={`/problem/${problem.problemNumber + 1}`}
+               className="p-1.5 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+               title="Next problem">
+              <ChevronRight className="w-4 h-4" />
+            </a>
+>>>>>>> origin/main
           </div>
         </div>
 
