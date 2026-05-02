@@ -1,30 +1,48 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@700;800;900&display=swap');
 
-/* ── CSS Variables / Midnight Prism Theme ─────────────────────────────────── */
+/* ── Gamified / The Luminescent Engine ────────────────────────────────────── */
 :root {
   font-family: 'Inter', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: dark;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 
-  --bg-base:      #08080f;
-  --bg-elevated:  #0e0e1a;
-  --bg-card:      #13131f;
-  --bg-card-hover:#17172b;
-  --border:       rgba(139, 92, 246, 0.12);
-  --border-muted: rgba(255,255,255,0.06);
-  --accent:       #7c3aed;
-  --accent-light: #a78bfa;
-  --accent-glow:  rgba(124, 58, 237, 0.3);
-  --text-primary: #f1f0ff;
-  --text-muted:   #706f9a;
-  --text-subtle:  #3e3d5c;
-  --success:      #34d399;
-  --warning:      #fbbf24;
-  --danger:       #f87171;
+  /* Surfaces */
+  --bg-base:                  #000000;
+  --bg-elevated:              #091328; /* surface_container_low */
+  --bg-card:                  #0f1930; /* surface_container */
+  --bg-card-high:             #141f38; /* surface_container_high */
+  --bg-card-highest:          #192540; /* surface_container_highest */
+
+  /* Thematic Palette */
+  --primary:         #cc97ff;
+  --primary-dim:     #9c48ea;
+  --secondary:       #53ddfc;
+  --secondary-dim:   #40ceed;
+  --tertiary:        #ff95a0;
+  
+  --accent-glow:     rgba(204, 151, 255, 0.25);
+  --secondary-glow:  rgba(83, 221, 252, 0.25);
+  
+  /* Text */
+  --text-primary:    #dee5ff;
+  --text-muted:      #a3aac4;
+  --text-subtle:     #6d758c;
+
+  /* Feedback */
+  --success:         #34d399;
+  --warning:         #fbbf24;
+  --danger:          #f87171;
+  
+  /* Ghost borders instead of sharp lines */
+  --border:          rgba(109, 117, 140, 0.15);
+  --border-muted:    rgba(109, 117, 140, 0.08);
+}
+
+h1, h2, h3, h4, h5, h6, .game-font {
+  font-family: 'Lexend', inherit;
+  letter-spacing: -0.02em;
 }
 
 * {
@@ -49,49 +67,39 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--text-subtle); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-/* ── Glass Card Utility ───────────────────────────────────────────────────── */
+/* ── Glass Card / Container Utility ─────────────────────────────────────────── */
 .glass {
-  background: rgba(19, 19, 31, 0.72);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 24px;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-
-/* ── Gradient Text Utility ────────────────────────────────────────────────── */
-.gradient-text {
-  background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #60a5fa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── Glow Utility ─────────────────────────────────────────────────────────── */
-.glow-accent {
-  box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(124, 58, 237, 0.1);
-}
-
-/* ── Auth page background orbs ───────────────────────────────────────────── */
-.auth-bg-orb-1 {
-  position: fixed;
-  top: -20%;
-  left: -10%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
-  border-radius: 50%;
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   pointer-events: none;
-  z-index: 0;
+}
+
+/* ── Gamified Glow Elements ────────────────────────────────────────────────── */
+.auth-bg-orb-1 {
+  position: fixed; top: -10%; left: -10%; width: 50vw; height: 50vw;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
+  border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(60px);
 }
 .auth-bg-orb-2 {
-  position: fixed;
-  bottom: -20%;
-  right: -10%;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
+  position: fixed; bottom: -10%; right: -10%; width: 40vw; height: 40vw;
+  background: radial-gradient(circle, var(--secondary-glow) 0%, transparent 60%);
+  border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(60px);
 }
 
 /* ── Input focus glow ─────────────────────────────────────────────────────── */
@@ -112,31 +120,33 @@ body {
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
 }
 
-/* ── Primary Button ───────────────────────────────────────────────────────── */
+/* ── Primary Action Button (Tactile 3D Bevel) ───────────────────────────── */
 .btn-primary {
   width: 100%;
-  background: linear-gradient(135deg, #7c3aed, #6366f1);
-  color: white;
-  font-weight: 600;
-  font-size: 0.9rem;
-  padding: 12px 24px;
-  border-radius: 10px;
+  background: linear-gradient(180deg, var(--primary), var(--primary-dim));
+  color: #190036;
+  font-weight: 800;
+  font-size: 1rem;
+  font-family: 'Lexend', inherit;
+  padding: 14px 24px;
+  border-radius: 9999px; /* Pill */
   border: none;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
+  /* 3D Tactile bevel and ambient glow */
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,0.3), 0 8px 30px var(--accent-glow);
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); /* Elastic jump */
   position: relative;
   overflow: hidden;
 }
-.btn-primary::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0);
-  transition: background 0.2s;
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 12px 40px var(--accent-glow);
 }
-.btn-primary:hover::after { background: rgba(255,255,255,0.07); }
-.btn-primary:active { transform: scale(0.98); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary:active { 
+  transform: translateY(2px);
+  box-shadow: inset 0 0px 0 rgba(0,0,0,0), 0 4px 10px var(--accent-glow);
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* ── Google Button ────────────────────────────────────────────────────────── */
 .btn-google {
@@ -145,19 +155,26 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border-muted);
+  background: var(--bg-card-highest);
+  border: 1px solid var(--border);
   color: var(--text-primary);
-  font-weight: 500;
-  font-size: 0.9rem;
-  padding: 11px 24px;
-  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 14px 24px;
+  border-radius: 9999px; /* Pill */
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition: all 0.2s;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.3);
 }
 .btn-google:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.15);
+  background: var(--bg-card-hover);
+  border-color: var(--secondary);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.3), 0 4px 20px var(--secondary-glow);
+  transform: translateY(-1px);
+}
+.btn-google:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 0px 0 rgba(0,0,0,0);
 }
 
 /* ── Guest Button ─────────────────────────────────────────────────────────── */

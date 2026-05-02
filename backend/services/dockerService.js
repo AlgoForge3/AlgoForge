@@ -1,10 +1,38 @@
-const { exec } = require('child_process');
-const fs = require('fs/promises');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const { spawn } = require('child_process');
 const { generateWrapper } = require('../utils/languageTemplates');
 
 const TIMEOUT_MS = 60000;
+
+/**
+ * Split Docker stdout into judge result lines and user-visible stdout.
+ */
+function splitExecutionOutput(stdout = '') {
+  const lines = stdout.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const resultLines = [];
+  const userOutputLines = [];
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (userOutputLines.length > 0) {
+        userOutputLines.push('');
+      }
+      return;
+    }
+
+    if (/^TC\d+:/.test(trimmed)) {
+      resultLines.push(trimmed);
+      return;
+    }
+
+    userOutputLines.push(line);
+  });
+
+  return {
+    resultLines,
+    stdout: userOutputLines.join('\n').trim(),
+  };
+}
 
 /**
  * Parse per-testcase results from Docker stdout.
@@ -12,14 +40,13 @@ const TIMEOUT_MS = 60000;
  *
  * Comparison is type-aware using problemMeta.returnType.
  */
-function parseResults(stdout, testCases, returnType) {
-  const lines = stdout.split('\n').map(l => l.trim()).filter(Boolean);
+function parseResults(resultLines, testCases, returnType) {
   const isVector = /vector|List|int\[\]|long\[\]/.test(returnType || '');
   const isBool   = /bool|boolean/.test(returnType || '');
 
   return testCases.map((tc, idx) => {
     const marker = `TC${idx}:`;
-    const line   = lines.find(l => l.startsWith(marker));
+    const line   = resultLines.find((resultLine) => resultLine.startsWith(marker));
 
     // Normalize expected to a comparable string
     let expectedStr;
@@ -57,6 +84,77 @@ function parseResults(stdout, testCases, returnType) {
   });
 }
 
+function runDockerScript(image, fileName, shellCommand, sourceCode, testCases, returnType) {
+  return new Promise((resolve) => {
+    const args = [
+      'run',
+      '--rm',
+      '--network=none',
+      '-i',
+      '-w',
+      '/usr/src/app',
+      image,
+      'sh',
+      '-c',
+      `cat > ${fileName} && ${shellCommand}`,
+    ];
+
+    const child = spawn('docker', args, { windowsHide: true });
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGKILL');
+    }, TIMEOUT_MS);
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (error) => {
+      finish({ error: error.message });
+    });
+
+    child.on('close', (code) => {
+      const { resultLines, stdout: userStdout } = splitExecutionOutput(stdout);
+
+      if (timedOut) {
+        return finish({ error: 'Time Limit Exceeded (60s)', stdout: userStdout });
+      }
+
+      if (code !== 0) {
+        return finish({
+          error: (stderr || stdout || `Docker exited with code ${code}`).trim(),
+          stdout: userStdout,
+        });
+      }
+
+      return finish({
+        results: parseResults(resultLines, testCases, returnType),
+        stdout: userStdout,
+        stderr: stderr.trim(),
+      });
+    });
+
+    child.stdin.on('error', () => {});
+    child.stdin.end(sourceCode);
+  });
+}
+
 /**
  * @param {string} language
  * @param {string} userCode
@@ -64,75 +162,45 @@ function parseResults(stdout, testCases, returnType) {
  * @param {Array}  testCases    — [{ inputs, expected, display }]
  */
 async function executeCode(language, userCode, problemMeta, testCases) {
-  const uuid   = uuidv4();
-  const tmpDir = path.resolve(__dirname, '..', 'tmp', uuid);
-
-  try {
-    await fs.mkdir(tmpDir, { recursive: true });
-  } catch {
-    return { error: 'Failed to create temp directory' };
-  }
-
   // Generate the complete source file
   let wrapperCode;
   try {
     wrapperCode = generateWrapper(language, userCode, problemMeta, testCases);
   } catch (e) {
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     return { error: e.message };
   }
 
-  const dockerMountPath = `"${tmpDir}:/usr/src/app"`;
-  let fileName, runCommand;
+  let fileName, dockerImage, runCommand;
 
   switch (language) {
     case 'cpp':
       fileName   = 'script.cpp';
-      runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app gcc:latest sh -c "g++ -O2 script.cpp -o script.out && ./script.out"`;
+      dockerImage = 'gcc:latest';
+      runCommand = 'g++ -O2 script.cpp -o script.out && ./script.out';
       break;
     case 'java':
       fileName   = 'Main.java';
+<<<<<<< HEAD
+      dockerImage = 'openjdk:17-slim';
+      runCommand = 'javac Main.java && java Main';
+=======
       runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app openjdk:17-jdk-slim sh -c "javac Main.java && java Main"`;
+>>>>>>> origin/main
       break;
     case 'python':
       fileName   = 'script.py';
-      runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app python:3.9-slim sh -c "python script.py"`;
+      dockerImage = 'python:3.9-slim';
+      runCommand = 'python script.py';
       break;
     case 'javascript':
       fileName   = 'script.js';
       runCommand = `docker run --rm --network=none -v ${dockerMountPath} -w /usr/src/app node:18-alpine sh -c "node script.js"`;
       break;
     default:
-      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
       return { error: `Unsupported language: ${language}` };
   }
 
-  try {
-    await fs.writeFile(path.join(tmpDir, fileName), wrapperCode);
-
-    return await new Promise((resolve) => {
-      exec(runCommand, { timeout: TIMEOUT_MS }, async (error, stdout, stderr) => {
-        fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-
-        if (error) {
-          if (error.signal === 'SIGTERM' || error.killed) {
-            return resolve({ error: 'Time Limit Exceeded (60s)' });
-          }
-          return resolve({ error: (stderr || stdout || error.message).trim() });
-        }
-        if (stderr) {
-          return resolve({ error: stderr.trim() });
-        }
-
-        const results = parseResults(stdout, testCases, problemMeta.returnType);
-        return resolve({ results });
-      });
-    });
-
-  } catch (err) {
-    fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-    return { error: 'Execution Service Error: ' + err.message };
-  }
+  return runDockerScript(dockerImage, fileName, runCommand, wrapperCode, testCases, problemMeta.returnType);
 }
 
 module.exports = { executeCode };

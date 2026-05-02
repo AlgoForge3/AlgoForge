@@ -34,7 +34,7 @@ export const Navbar = () => {
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', height: '60px', padding: '0 20px' }}>
         {/* Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <Link to={user || isGuest ? "/dashboard" : "/"} style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
           <div style={{
             width: '32px', height: '32px',
             background: 'linear-gradient(135deg, #7c3aed, #6366f1)',
@@ -53,17 +53,21 @@ export const Navbar = () => {
           {user ? (
             /* Logged-in User */
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
+              <Link to={`/profile/${user.username || user.name.replace(/\\s+/g, '')}`} style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 background: 'rgba(124, 58, 237, 0.08)',
                 border: '1px solid rgba(124, 58, 237, 0.2)',
                 padding: '6px 14px', borderRadius: '999px',
-              }}>
+                textDecoration: 'none', transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(124, 58, 237, 0.4)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(124, 58, 237, 0.2)'}
+              >
                 <User style={{ width: '14px', height: '14px', color: '#a78bfa' }} />
                 <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#e2e0ff' }}>{user.name}</span>
                 <span style={{ color: 'rgba(139, 92, 246, 0.4)', padding: '0 4px' }}>•</span>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#a78bfa' }}>{user.currentLevel || userLevel}</span>
-              </div>
+              </Link>
               <button onClick={handleLogout} title="Logout" style={{
                 display: 'flex', alignItems: 'center', gap: '5px',
                 background: 'transparent', border: 'none', cursor: 'pointer',

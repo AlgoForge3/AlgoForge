@@ -32,7 +32,7 @@ export const Register = () => {
     try {
       const { data } = await api.post('/auth/register', { name, email, password });
       login(data, data.token);
-      navigate('/dashboard');
+      navigate('/assessment');
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Try again.');
     } finally {
@@ -48,7 +48,7 @@ export const Register = () => {
     try {
       const { data } = await api.post('/auth/google', { token: credentialResponse.credential });
       login(data, data.token);
-      navigate('/dashboard');
+      navigate(data.assessmentCompleted ? '/dashboard' : '/assessment');
     } catch (err) {
       setError(err.response?.data?.error || 'Google sign-up failed. Please try again.');
     } finally {

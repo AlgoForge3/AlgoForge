@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export const useUserStore = create((set) => ({
+export const useUserStore = create((set, get) => ({
   user:      JSON.parse(localStorage.getItem('user'))  || null,
   token:     localStorage.getItem('token')             || null,
   userLevel: JSON.parse(localStorage.getItem('user'))?.currentLevel || null,
@@ -42,4 +42,28 @@ export const useUserStore = create((set) => ({
     }
     return { userLevel: level }
   }),
+
+  // ── Assessment Completed ────────────────────────────────────────────────
+  /**
+   * Called after assessment is saved to DB. Updates local state + localStorage
+   * so the redirect logic in Login/Register knows not to redirect again.
+   */
+  setAssessmentCompleted: (level, score) => set((state) => {
+    const updatedUser = {
+      ...state.user,
+      currentLevel:        level,
+      assessmentCompleted: true,
+      assessmentScore:     score,
+    }
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    return { user: updatedUser, userLevel: level }
+  }),
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  /** Whether the current logged-in user still needs to take the assessment */
+  needsAssessment: () => {
+    const state = get()
+    if (!state.user || state.isGuest) return false
+    return !state.user.assessmentCompleted
+  },
 }))

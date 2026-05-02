@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const submissionSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref:      'User',
+      required: true,
+      index:    true,
+    },
     problemId: {
       type: mongoose.Schema.Types.ObjectId,
       ref:      'Problem',
@@ -33,5 +39,8 @@ const submissionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Compound index for heatmap queries (user + date)
+submissionSchema.index({ userId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Submission', submissionSchema);

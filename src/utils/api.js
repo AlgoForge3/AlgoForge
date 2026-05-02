@@ -15,6 +15,15 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Bypass browser caching without triggering CORS OPTIONS preflight
+    if (config.method === 'get') {
+      config.params = {
+        ...config.params,
+        _t: new Date().getTime(),
+      };
+    }
+    
     return config;
   },
   (error) => {
