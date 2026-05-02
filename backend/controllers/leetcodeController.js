@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Problem = require('../models/Problem');
+const geminiService = require('../services/geminiService');
 
 const LEETCODE_API = 'https://leetcode.com/graphql';
 
@@ -54,6 +55,16 @@ const mapType = (lcType) => {
     return lcType; 
 };
 
+const formatExampleOutput = (value) => {
+    if (Array.isArray(value) || (value && typeof value === 'object')) {
+        return JSON.stringify(value);
+    }
+    if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+    }
+    return String(value ?? '');
+};
+
 // @desc Sync an array of LeetCode title slugs to our DB
 const syncLeetcodeProblems = async (req, res) => {
     const slugs = req.body.slugs;
@@ -65,23 +76,33 @@ const syncLeetcodeProblems = async (req, res) => {
         console.log(`Syncing: ${slug}`);
         try {
             const q = await getLeetCodeQuestion(slug);
+            console.log(`Fetched q for ${slug}:`, q ? "Found" : "Null");
             if (!q) {
                 console.error("Skipped " + slug);
                 continue;
             }
 
-            const metaData = JSON.parse(q.metaData);
-            const outputs = parseOutputsFromHTML(q.content);
+            const metaData = q.metaData ? JSON.parse(q.metaData) : {};
+            const outputs = q.content ? parseOutputsFromHTML(q.content) : [];
             
-            const testCases = [];
+            const publicTestCases = [];
+            const examples = [];
+            const hasParams = metaData && metaData.params && Array.isArray(metaData.params);
+            
             (q.exampleTestcaseList || []).forEach((testcaseStr, i) => {
                 const inputs = testcaseStr.split('\n');
                 const inputObj = {};
-                metaData.params.forEach((param, pIdx) => {
-                    let raw = inputs[pIdx];
-                    try { raw = JSON.parse(raw); } catch(e){}
-                    inputObj[param.name] = raw;
-                });
+                
+                if (hasParams) {
+                    metaData.params.forEach((param, pIdx) => {
+                        let raw = inputs[pIdx];
+                        try { raw = JSON.parse(raw); } catch(e){}
+                        inputObj[param.name] = raw;
+                    });
+                } else {
+                    // For design/premium problems without standard params
+                    inputObj["input"] = inputs;
+                }
 
                 let expected = outputs[i] ? outputs[i] : "";
                 if (expected && expected !== "true" && expected !== "false") {
@@ -89,23 +110,33 @@ const syncLeetcodeProblems = async (req, res) => {
                 } else if (expected === "true") expected = true;
                 else if (expected === "false") expected = false;
 
-                testCases.push({
+                publicTestCases.push({
                     inputs: inputObj,
                     expected,
                     display: testcaseStr
                 });
+
+                examples.push({
+                    input: testcaseStr.replace(/\n/g, ', '),
+                    output: formatExampleOutput(expected),
+                    explanation: null,
+                });
             });
 
-            const parameters = metaData.params.map(p => ({
+            const parameters = hasParams ? metaData.params.map(p => ({
                 name: p.name,
                 type: mapType(p.type)
-            }));
-            const returnType = mapType(metaData.return.type);
+            })) : [];
+            
+            const returnType = metaData && metaData.return ? mapType(metaData.return.type) : "void";
 
             const jsCode = q.codeSnippets?.find(s => s.langSlug === 'javascript')?.code || '';
             const cppCode = q.codeSnippets?.find(s => s.langSlug === 'cpp')?.code || '';
             const pyCode = q.codeSnippets?.find(s => s.langSlug === 'python3' || s.langSlug === 'python')?.code || '';
             const javaCode = q.codeSnippets?.find(s => s.langSlug === 'java')?.code || '';
+            
+            // If content is null, it's likely a Premium problem
+            const description = q.content || "🔒 This is a LeetCode Premium problem. The description and starter code are locked.";
 
             const problemData = {
                 problemNumber: parseInt(q.questionFrontendId) || Math.floor(Math.random() * 10000),
@@ -113,8 +144,8 @@ const syncLeetcodeProblems = async (req, res) => {
                 titleSlug: q.titleSlug,
                 difficulty: q.difficulty,
                 topics: q.topicTags.map(t => t.name),
-                description: q.content || "Description not available",
-                functionName: metaData.name,
+                description: description,
+                functionName: metaData.name || "main",
                 returnType,
                 parameters,
                 starterCode: {
@@ -123,7 +154,9 @@ const syncLeetcodeProblems = async (req, res) => {
                     python: pyCode,
                     java: javaCode
                 },
-                testCases,
+                publicTestCases,
+                testCases: [],
+                examples,
                 isSkeleton: false
             };
 
@@ -140,9 +173,21 @@ const syncLeetcodeProblems = async (req, res) => {
             } else {
                 savedProblem = await Problem.create(problemData);
             }
+            
+            // Trigger background AI test case generation
+            geminiService.generateHiddenTestCases(problemData, publicTestCases).then(async (hiddenCases) => {
+                if (hiddenCases && hiddenCases.length > 0) {
+                    await Problem.findByIdAndUpdate(savedProblem._id, {
+                        $push: { testCases: { $each: hiddenCases } }
+                    });
+                    console.log(`✅ AI generated ${hiddenCases.length} hidden test cases for "${savedProblem.title}"`);
+                }
+            }).catch(err => console.error(`❌ Failed to generate AI test cases for ${savedProblem.title}:`, err));
+
             synced.push({ title: savedProblem.title, status: 'Success' });
         } catch (innerErr) {
             console.error(`Error syncing ${slug}:`, innerErr);
+            synced.push({ title: slug, status: 'Error', error: innerErr.message, stack: innerErr.stack });
         }
     }
     

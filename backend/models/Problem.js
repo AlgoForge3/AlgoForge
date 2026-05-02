@@ -54,6 +54,7 @@ const problemSchema = new mongoose.Schema(
 
     // ── Starter code shown in the editor ───────────────────────────────────
     starterCode: { type: starterCodeSchema, default: () => ({}) },
+    publicTestCases: { type: [testCaseSchema], default: [] },
 
     // ── Graded test cases (hidden from the frontend) ────────────────────────
     testCases: { type: [testCaseSchema], default: [] },
